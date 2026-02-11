@@ -1,8 +1,10 @@
 // API комуникация с бекенда
 export const Api = {
-    // Базов URL
-    baseUrl: 'https://furniturecalculator.onrender.com',
-    
+    // Автоматично избира адреса според това къде е зареден сайтът
+    baseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000'
+        : window.location.origin, // Това автоматично ще стане https://furniturecalculator.onrender.com
+
     // Изчисляване на един шкаф
     async calculateCabinet(data) {
         try {
