@@ -51,21 +51,19 @@ except ImportError as e:
 # Static files for frontend
 try:
     from fastapi.staticfiles import StaticFiles
-    # Frontend е в Local_code/frontend, а не в api/frontend
-    # Изчисляваме правилния path
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    api_dir = os.path.dirname(current_dir)  # api/
-    local_code_dir = os.path.dirname(api_dir)  # Local_code/
-    frontend_path = os.path.join(local_code_dir, "frontend")
-    
-    if os.path.exists(frontend_path):
-        app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
-        print(f"✅ Frontend mounted from: {frontend_path}")
-    else:
-        print(f"⚠️  Frontend directory not found at: {frontend_path}")
-        print(f"📁 API dir: {api_dir}")
-        print(f"📁 Local_code dir: {local_code_dir}")
-        print(f"📁 Available dirs: {os.listdir(local_code_dir)}")
+import os
+
+# Намираме реалния път до папката frontend
+current_file_path = os.path.dirname(os.path.abspath(__file__)) # api/app/
+root_path = os.path.dirname(os.path.dirname(current_file_path)) # Връща ни в root на проекта
+frontend_path = os.path.join(root_path, "frontend")
+
+if os.path.exists(frontend_path):
+    # 'html=True' автоматично ще търси index.html на основния адрес
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    print(f"✅ Frontend mounted successfully from: {frontend_path}")
+else:
+    print(f"❌ Critical Error: Frontend directory NOT found at {frontend_path}")
 except ImportError as e:
     print(f"⚠️  Warning: Could not setup static files: {e}")
 
