@@ -1,0 +1,406 @@
+/* Основни стилове */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+h1 { font-size: 2.5em; margin-bottom: 10px; }
+.subtitle { font-size: 1.2em; opacity: 0.9; }
+
+.tabs {
+    display: flex;
+    background: #f5f5f5;
+    padding: 0;
+    flex-wrap: wrap;
+}
+
+.tab {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.3s;
+    border-bottom: 3px solid transparent;
+    min-width: 150px;
+}
+
+.tab:hover { background: #e0e0e0; }
+.tab.active {
+    color: #667eea;
+    background: white;
+    border-bottom: 3px solid #667eea;
+}
+
+.tab-content { display: none; padding: 30px; }
+.tab-content.active { display: block; }
+
+.section-title {
+    font-size: 1.8em;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
+}
+
+.section-description {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 1.1em;
+}
+
+.form-section {
+    background: #f9f9f9;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group { margin-bottom: 15px; }
+
+label {
+    display: block;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+}
+
+.checkbox-label {
+    font-weight: normal;
+    display: inline;
+}
+
+.btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin: 5px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary { background: #6c757d; }
+.btn-success { background: #28a745; }
+.btn-danger { background: #dc3545; }
+.btn-warning { background: #ffc107; color: #333; }
+.btn-small { padding: 6px 12px; font-size: 0.85em; }
+
+.cabinet-preview-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 3px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.cabinet-preview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.cabinet-icon {
+    font-size: 80px;
+    margin-bottom: 15px;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
+}
+
+.cabinet-type-name {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.cabinet-description {
+    color: #666;
+    font-size: 0.95em;
+    line-height: 1.4;
+}
+
+.collapsible {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: all 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.collapsible:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
+
+.collapsible:after {
+    content: '▼';
+    font-size: 1.2em;
+    transition: transform 0.3s;
+}
+
+.collapsible.active:after {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: #f9f9f9;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 15px;
+}
+
+.collapsible-content-inner {
+    padding: 20px;
+}
+
+.price-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.price-table th {
+    background: #667eea;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.price-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.price-table tr:hover {
+    background: #f5f5f5;
+}
+
+.price-table input[type="number"],
+.price-table input[type="text"] {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.price-total {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.delete-row-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.delete-row-btn:hover {
+    background: #c82333;
+}
+
+.add-row-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px dashed #ddd;
+}
+
+.profile-selector {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 2px solid #667eea;
+}
+
+.profile-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.custom-door-size {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border: 2px solid #ffc107;
+}
+
+.result-display {
+    margin-top: 20px;
+    padding: 20px;
+    background: #e8f5e9;
+    border-radius: 8px;
+    border-left: 4px solid #4caf50;
+    display: none;
+}
+
+.error-display {
+    margin-top: 20px;
+    padding: 20px;
+    background: #ffebee;
+    border-radius: 8px;
+    border-left: 4px solid #f44336;
+    display: none;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+    display: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.cabinet-list-item {
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cabinet-list-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.row-total {
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+/* Cut-list специфични стилове */
+.sheet-visualization {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    background: #f8f9fa;
+    margin: 10px 0;
+}
+
+.cutlist-part:hover {
+    stroke-width: 2px;
+    stroke: #dc3545;
+}
+
+.cutlist-label {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    pointer-events: none;
+    user-select: none;
+}
+
+.remove-part-btn, .remove-sheet-btn {
+    transition: all 0.2s;
+}
+
+.remove-part-btn:hover, .remove-sheet-btn:hover {
+    transform: scale(1.1);
+    background-color: #c82333 !important;
+}

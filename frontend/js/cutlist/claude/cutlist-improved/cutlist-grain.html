@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cut-list оптимизатор v3.0 - С Grain Direction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 { font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #667eea; margin: 30px 0 15px 0; }
+        h3 { color: #764ba2; margin: 20px 0 10px 0; }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .content {
+            min-height: 500px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            width: auto;
+            display: inline-block;
+        }
+        
+        .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-danger { background: #dc3545; }
+        .btn-secondary { background: #6c757d; }
+        
+        .grain-selector {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #ffc107;
+        }
+        
+        .grain-selector h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .grain-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .grain-option {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .grain-option:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .grain-option.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .grain-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .parts-list, .sheets-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .list-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .list-item-info {
+            flex: 1;
+        }
+        
+        .grain-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .grain-horizontal {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .grain-vertical {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .grain-any {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-card.grain-warning {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+        }
+        
+        .stat-card.grain-ok {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .sheet-container {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .sheet-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .cutlist-svg {
+            width: 100%;
+            height: auto;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+        }
+        
+        .cutlist-part {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .cutlist-part:hover {
+            opacity: 0.9;
+            filter: brightness(1.1);
+        }
+        
+        .cutlist-part.grain-violation {
+            filter: drop-shadow(0 0 4px rgba(220, 53, 69, 0.8));
+        }
+        
+        .grain-info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #0066cc;
+        }
+        
+        .grain-info-box h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .grain-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-weight: bold;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🪚 Cut-list Optimizer v3.0</h1>
+            <p style="opacity: 0.9; margin-top: 10px;">Професионално разкрояване с поддръжка на grain direction</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <h2 style="margin-top: 0;">⚙️ Контроли</h2>
+                
+                <!-- Settings -->
+                <div class="checkbox-group">
+                    <input type="checkbox" id="allowRotation" checked>
+                    <label for="allowRotation" style="margin: 0;">Позволи завъртане</label>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="respectGrain" checked>
+                    <label for="respectGrain" style="margin: 0;">🌾 Уважавай grain</label>
+                </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="showGrain" checked>
+                    <label for="showGrain" style="margin: 0;">Покажи grain</label>
+                </div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+                
+                <!-- Add Part Form -->
+                <h3>➕ Добави Детайл</h3>
+                
+                <div class="form-group">
+                    <label>Име</label>
+                    <input type="text" id="partName" value="Страница">
+                </div>
+                
+                <div class="form-group">
+                    <label>Ширина (mm)</label>
+                    <input type="number" id="partWidth" value="760">
+                </div>
+                
+                <div class="form-group">
+                    <label>Височина (mm)</label>
+                    <input type="number" id="partHeight" value="560">
+                </div>
+                
+                <div class="form-group">
+                    <label>Брой</label>
+                    <input type="number" id="partQty" value="2" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Материал</label>
+                    <select id="partMaterial">
+                        <option value="ПДЧ 18мм">ПДЧ 18мм</option>
+                        <option value="МДФ 18мм">МДФ 18мм</option>
+                        <option value="ХДЛ 18мм" selected>ХДЛ 18мм</option>
+                        <option value="Масив 20мм">Масив 20мм</option>
+                        <option value="Фурнир 6мм">Фурнир 6мм</option>
+                    </select>
+                </div>
+                
+                <!-- Grain Selector -->
+                <div class="grain-selector">
+                    <h4>🌾 Grain Direction</h4>
+                    <select id="partGrain" class="form-control" style="width: 100%; margin-top: 10px;">
+                        <option value="auto">🤖 Автоматично</option>
+                        <option value="horizontal">→ Horizontal</option>
+                        <option value="vertical">↑ Vertical</option>
+                        <option value="any">○ Any (без значение)</option>
+                    </select>
+                    <small style="color: #856404; display: block; margin-top: 8px;">
+                        За ХДЛ, Масив, Фурнир - grain е важен!
+                    </small>
+                </div>
+                
+                <button class="btn btn-success" onclick="addPart()">➕ Добави</button>
+                
+                <div id="partsList" class="parts-list"></div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+                
+                <!-- Add Sheet Form -->
+                <h3>📄 Добави Лист</h3>
+                
+                <div class="form-group">
+                    <label>Материал</label>
+                    <select id="sheetMaterial">
+                        <option value="ПДЧ 18мм">ПДЧ 18мм</option>
+                        <option value="МДФ 18мм">МДФ 18мм</option>
+                        <option value="ХДЛ 18мм" selected>ХДЛ 18мм</option>
+                        <option value="Масив 20мм">Масив 20мм</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ширина (mm)</label>
+                    <input type="number" id="sheetWidth" value="2800">
+                </div>
+                
+                <div class="form-group">
+                    <label>Височина (mm)</label>
+                    <input type="number" id="sheetHeight" value="2070">
+                </div>
+                
+                <div class="form-group">
+                    <label>Цена (лв)</label>
+                    <input type="number" id="sheetCost" value="250" step="0.01">
+                </div>
+                
+                <div class="grain-selector">
+                    <h4>🌾 Grain на листа</h4>
+                    <select id="sheetGrain" style="width: 100%; margin-top: 10px;">
+                        <option value="auto">🤖 Автоматично</option>
+                        <option value="horizontal" selected>→ Horizontal</option>
+                        <option value="vertical">↑ Vertical</option>
+                        <option value="any">○ Any</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-success" onclick="addSheet()">➕ Добави Лист</button>
+                
+                <div id="sheetsList" class="sheets-list"></div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+                
+                <button class="btn" onclick="calculate()">🧮 ИЗЧИСЛИ</button>
+                <button class="btn btn-warning" onclick="loadExample()">📝 Зареди пример</button>
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ Изчисти</button>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content">
+                <div class="grain-info-box">
+                    <h4>🌾 Какво е Grain Direction?</h4>
+                    <p><strong>Grain direction (фладер)</strong> е посоката на дървесните влакна. При материали като ХДЛ, масив и фурнир, grain-ът трябва да е в една посока за естетичен вид.</p>
+                    <div class="grain-legend">
+                        <div class="legend-item">
+                            <span style="font-size: 1.5em;">→</span>
+                            <span><strong>Horizontal</strong> - влакната са хоризонтални</span>
+                        </div>
+                        <div class="legend-item">
+                            <span style="font-size: 1.5em;">↑</span>
+                            <span><strong>Vertical</strong> - влакната са вертикални</span>
+                        </div>
+                        <div class="legend-item">
+                            <span style="font-size: 1.5em;">○</span>
+                            <span><strong>Any</strong> - без значение (ПДЧ, МДФ)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span style="font-size: 1.5em; color: #dc3545;">⚠</span>
+                            <span><strong>Violation</strong> - grain нарушение</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" onclick="switchResultTab('results')">📊 Резултати</button>
+                    <button class="tab" onclick="switchResultTab('visualization')">🖼️ Визуализация</button>
+                    <button class="tab" onclick="switchResultTab('report')">📄 Отчет</button>
+                </div>
+
+                <!-- Results Tab -->
+                <div id="results" class="tab-content active">
+                    <div id="statsContainer" class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>Няма резултати</h3>
+                        <p>Добавете детайли и листове, после кликнете "ИЗЧИСЛИ"</p>
+                    </div>
+                </div>
+
+                <!-- Visualization Tab -->
+                <div id="visualization" class="tab-content">
+                    <div id="visualizationContainer" class="empty-state">
+                        <div class="empty-state-icon">🖼️</div>
+                        <h3>Няма визуализация</h3>
+                        <p>Изчислете проекта за да видите визуализацията</p>
+                    </div>
+                </div>
+
+                <!-- Report Tab -->
+                <div id="report" class="tab-content">
+                    <div id="reportContainer" class="empty-state">
+                        <div class="empty-state-icon">📄</div>
+                        <h3>Няма отчет</h3>
+                        <p>Изчислете проекта за да генерирате отчет</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { CutListEngine } from './engine.js';
+        import { CutListVisualizer } from './visualizer.js';
+        
+        window.engine = new CutListEngine();
+        let currentTab = 'results';
+        
+        window.switchResultTab = (tab) => {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+        };
+        
+        window.updateSettings = () => {
+            engine.settings.allowRotation = document.getElementById('allowRotation').checked;
+            engine.settings.respectGrainDirection = document.getElementById('respectGrain').checked;
+        };
+        
+        window.addPart = () => {
+            updateSettings();
+            
+            const name = document.getElementById('partName').value;
+            const width = parseInt(document.getElementById('partWidth').value);
+            const height = parseInt(document.getElementById('partHeight').value);
+            const qty = parseInt(document.getElementById('partQty').value);
+            const material = document.getElementById('partMaterial').value;
+            const grainValue = document.getElementById('partGrain').value;
+            
+            const grainDirection = grainValue === 'auto' 
+                ? engine.detectGrainDirection(material, width, height)
+                : grainValue;
+            
+            engine.addPart(name, width, height, qty, material, {
+                grainDirection,
+                priority: 5
+            });
+            
+            updatePartsList();
+        };
+        
+        window.addSheet = () => {
+            const width = parseInt(document.getElementById('sheetWidth').value);
+            const height = parseInt(document.getElementById('sheetHeight').value);
+            const cost = parseFloat(document.getElementById('sheetCost').value);
+            const material = document.getElementById('sheetMaterial').value;
+            const grainValue = document.getElementById('sheetGrain').value;
+            
+            const grainDirection = grainValue === 'auto'
+                ? engine.detectGrainDirection(material, width, height)
+                : grainValue;
+            
+            engine.addSheet(material, width, height, cost, material, { grainDirection });
+            updateSheetsList();
+        };
+        
+        window.calculate = () => {
+            updateSettings();
+            
+            if (engine.parts.length === 0) {
+                alert('⚠️ Добавете поне един детайл!');
+                return;
+            }
+            
+            if (engine.sheets.length === 0) {
+                alert('⚠️ Добавете поне един лист!');
+                return;
+            }
+            
+            const results = engine.calculateOptimization();
+            displayResults(results);
+        };
+        
+        window.loadExample = () => {
+            engine.parts = [];
+            engine.sheets = [];
+            
+            // Листове
+            engine.addSheet('ХДЛ', 2800, 2070, 250, 'ХДЛ 18мм', { grainDirection: 'horizontal' });
+            
+            // Детайли
+            engine.addPart('Страница', 760, 560, 2, 'ХДЛ 18мм', { grainDirection: 'horizontal', priority: 8 });
+            engine.addPart('Рафт', 580, 500, 3, 'ХДЛ 18мм', { grainDirection: 'horizontal', priority: 6 });
+            engine.addPart('Врата', 697, 2000, 2, 'ХДЛ 18мм', { grainDirection: 'vertical', priority: 9 });
+            engine.addPart('Дъно', 582, 500, 1, 'ХДЛ 18мм', { grainDirection: 'horizontal', priority: 5 });
+            
+            updatePartsList();
+            updateSheetsList();
+            alert('✅ Примерен проект зареден!');
+        };
+        
+        window.clearAll = () => {
+            if (confirm('Сигурни ли сте?')) {
+                engine.parts = [];
+                engine.sheets = [];
+                engine.results = [];
+                updatePartsList();
+                updateSheetsList();
+                clearResults();
+            }
+        };
+        
+        function updatePartsList() {
+            const container = document.getElementById('partsList');
+            if (engine.parts.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма детайли</p>';
+                return;
+            }
+            
+            const grouped = {};
+            engine.parts.forEach(p => {
+                const key = `${p.name}_${p.width}x${p.height}_${p.grainDirection}`;
+                if (!grouped[key]) grouped[key] = { ...p, count: 0 };
+                grouped[key].count++;
+            });
+            
+            let html = '';
+            Object.values(grouped).forEach(p => {
+                const grainIcon = p.grainDirection === 'horizontal' ? '→' : 
+                                 (p.grainDirection === 'vertical' ? '↑' : '○');
+                const grainClass = p.grainDirection === 'horizontal' ? 'grain-horizontal' : 
+                                  (p.grainDirection === 'vertical' ? 'grain-vertical' : 'grain-any');
+                
+                html += `<div class="list-item">
+                    <div class="list-item-info">
+                        ${p.count}x <strong>${p.name}</strong><br>
+                        <small>${p.width}×${p.height}mm - ${p.material}</small>
+                        <span class="grain-badge ${grainClass}">${grainIcon} ${p.grainDirection}</span>
+                    </div>
+                </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function updateSheetsList() {
+            const container = document.getElementById('sheetsList');
+            if (engine.sheets.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма листове</p>';
+                return;
+            }
+            
+            let html = '';
+            engine.sheets.forEach(s => {
+                const grainIcon = s.grainDirection === 'horizontal' ? '→' : 
+                                 (s.grainDirection === 'vertical' ? '↑' : '○');
+                const grainClass = s.grainDirection === 'horizontal' ? 'grain-horizontal' : 
+                                  (s.grainDirection === 'vertical' ? 'grain-vertical' : 'grain-any');
+                
+                html += `<div class="list-item">
+                    <div class="list-item-info">
+                        <strong>${s.materialType}</strong><br>
+                        <small>${s.width}×${s.height}mm - ${s.cost}лв</small>
+                        <span class="grain-badge ${grainClass}">${grainIcon} ${s.grainDirection}</span>
+                    </div>
+                </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function displayResults(results) {
+            const stats = engine.getStatistics();
+            const showGrain = document.getElementById('showGrain').checked;
+            const showGrainViolations = true;
+            
+            // Stats
+            let statsHTML = '<div class="stats-grid">';
+            statsHTML += `<div class="stat-card">
+                <div class="stat-label">Използвани листове</div>
+                <div class="stat-value">${stats.totalSheets}</div>
+            </div>`;
+            statsHTML += `<div class="stat-card">
+                <div class="stat-label">Поставени детайли</div>
+                <div class="stat-value">${stats.placedParts}/${stats.totalParts}</div>
+            </div>`;
+            statsHTML += `<div class="stat-card">
+                <div class="stat-label">Ефективност</div>
+                <div class="stat-value">${stats.materialEfficiency}</div>
+            </div>`;
+            statsHTML += `<div class="stat-card ${stats.grainViolations > 0 ? 'grain-warning' : 'grain-ok'}">
+                <div class="stat-label">🌾 Grain Съответствие</div>
+                <div class="stat-value">${stats.grainCompliance}</div>
+                ${stats.grainViolations > 0 ? `<small style="color: #dc3545;">⚠ ${stats.grainViolations} нарушения</small>` : '<small style="color: #28a745;">✓ Без нарушения</small>'}
+            </div>`;
+            statsHTML += '</div>';
+            
+            document.getElementById('statsContainer').innerHTML = statsHTML;
+            
+            // Visualization
+            let vizHTML = '';
+            results.forEach((sheet, index) => {
+                vizHTML += `<div class="sheet-container">
+                    <div class="sheet-header">
+                        <h3>Лист ${index + 1}: ${sheet.materialType}</h3>
+                        <div class="sheet-meta">
+                            <span>📏 ${sheet.width}×${sheet.height}mm</span>
+                            <span>📊 ${sheet.efficiency.toFixed(1)}%</span>
+                            <span>🌾 ${(sheet.grainCompliance || 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    ${CutListVisualizer.generateSVG(sheet, { 
+                        scale: 0.3, 
+                        showGrain, 
+                        showGrainViolations 
+                    })}
+                </div>`;
+            });
+            
+            document.getElementById('visualizationContainer').innerHTML = vizHTML || '<div class="empty-state"><p>Няма визуализация</p></div>';
+            
+            // Report
+            CutListVisualizer.generateReport(engine, 'reportContainer');
+        }
+        
+        function clearResults() {
+            document.getElementById('statsContainer').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><h3>Няма резултати</h3></div>';
+            document.getElementById('visualizationContainer').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖼️</div><h3>Няма визуализация</h3></div>';
+            document.getElementById('reportContainer').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📄</div><h3>Няма отчет</h3></div>';
+        }
+        
+        // Initial load
+        updatePartsList();
+        updateSheetsList();
+    </script>
+</body>
+</html>

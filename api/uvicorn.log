@@ -1,0 +1,15 @@
+INFO:     Will watch for changes in these directories: ['/mnt/nvme1/Furniture calculator/Local_code/api']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [824983] using StatReload
+INFO:     Started server process [824985]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+⚠️  Warning: Could not import routers: No module named 'cabinet_calculator'
+✅ Frontend mounted from: /mnt/nvme1/Furniture calculator/Local_code/frontend
+🚀 Starting Furniture Calculator API...
+INFO:     127.0.0.1:48212 - "POST /api/v1/cabinets/calculate HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [824985]
+INFO:     Stopping reloader process [824983]

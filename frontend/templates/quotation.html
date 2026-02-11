@@ -1,0 +1,77 @@
+<!-- templates/quotation.html -->
+<div id="quotation-template" style="display: none;">
+    <div class="quotation">
+        <header>
+            <h1>ОФЕРТА № {{number}}/{{year}}</h1>
+            <div class="company-info">
+                <p><strong>{{companyName}}</strong></p>
+                <p>ЕИК: {{eik}}</p>
+                <p>Адрес: {{address}}</p>
+                <p>Телефон: {{phone}}</p>
+            </div>
+        </header>
+        
+        <div class="customer-info">
+            <h2>Данни за клиента:</h2>
+            <p>Име: {{customerName}}</p>
+            <p>Адрес: {{customerAddress}}</p>
+            <p>Телефон: {{customerPhone}}</p>
+        </div>
+        
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Описание</th>
+                    <th>Количество</th>
+                    <th>Мерна единица</th>
+                    <th>Ед. цена</th>
+                    <th>Стойност</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each items}}
+                <tr>
+                    <td>{{@index}}</td>
+                    <td>{{this.description}}</td>
+                    <td>{{this.quantity}}</td>
+                    <td>{{this.unit}}</td>
+                    <td>{{this.unitPrice}} лв.</td>
+                    <td>{{this.total}} лв.</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        
+        <div class="totals">
+            <p>Обща стойност: <strong>{{subtotal}} лв.</strong></p>
+            <p>ДДС (20%): <strong>{{vat}} лв.</strong></p>
+            <p class="grand-total">Крайна сума: <strong>{{total}} лв.</strong></p>
+        </div>
+        
+        <div class="terms">
+            <h3>Условия:</h3>
+            <ol>
+                <li>Срок на изпълнение: {{deliveryDays}} работни дни</li>
+                <li>Гаранция: 24 месеца</li>
+                <li>Начин на плащане: 50% аванс, 50% при доставка</li>
+                <li>Цените са в лева без ДДС</li>
+            </ol>
+        </div>
+        
+        <footer>
+            <div class="signatures">
+                <div class="supplier">
+                    <p>Доставчик:</p>
+                    <p>.......................................</p>
+                    <p>(име и подпис)</p>
+                </div>
+                <div class="customer">
+                    <p>Клиент:</p>
+                    <p>.......................................</p>
+                    <p>(име и подпис)</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
