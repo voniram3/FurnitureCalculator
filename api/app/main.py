@@ -49,24 +49,24 @@ except ImportError as e:
     print(f"⚠️  Warning: Could not import routers: {e}")
 
 # Static files for frontend
+# Static files for frontend
 try:
     from fastapi.staticfiles import StaticFiles
-import os
+    import os
 
-# Намираме реалния път до папката frontend
-current_file_path = os.path.dirname(os.path.abspath(__file__)) # api/app/
-root_path = os.path.dirname(os.path.dirname(current_file_path)) # Връща ни в root на проекта
-frontend_path = os.path.join(root_path, "frontend")
+    # Изчисляваме пътя до frontend папката
+    current_file_path = os.path.dirname(os.path.abspath(__file__))
+    root_path = os.path.dirname(os.path.dirname(current_file_path))
+    frontend_path = os.path.join(root_path, "frontend")
 
-if os.path.exists(frontend_path):
-    # 'html=True' автоматично ще търси index.html на основния адрес
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
-    print(f"✅ Frontend mounted successfully from: {frontend_path}")
-else:
-    print(f"❌ Critical Error: Frontend directory NOT found at {frontend_path}")
-except ImportError as e:
-    print(f"⚠️  Warning: Could not setup static files: {e}")
-
+    if os.path.exists(frontend_path):
+        # Това позволява на Render да отвори index.html на главния адрес
+        app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+        print(f"✅ Frontend mounted successfully from: {frontend_path}")
+    else:
+        print(f"⚠️ Warning: Frontend directory NOT found at {frontend_path}")
+except Exception as e:
+    print(f"⚠️ Warning: Could not setup static files: {e}")
 
 @app.get("/")
 async def root():
