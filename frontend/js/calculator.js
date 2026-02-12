@@ -1,6 +1,7 @@
 import { State } from './state.js';
 import { UI } from './ui.js';
 import { Api } from './api.js';
+import { ExcelHandler } from './excelHandler.js';
 
 // Калкулаторни функции
 export const Calculator = {
@@ -86,33 +87,32 @@ export const Calculator = {
         }
     },
 
-    // Експорт на проект
-    exportProject() {
+    // 🆕 ПОДОБРЕН Експорт на проект - Директно в Excel
+    async exportProject() {
         const project = State.currentProject;
+        
         if (project.length === 0) {
             alert('⚠️ Няма данни за експорт!');
             return;
         }
 
-        // Избор на формат
-        const format = prompt('Изберете формат за експорт (csv, json, excel):', 'csv');
-
-        switch (format?.toLowerCase()) {
-            case 'csv':
-                this.exportToCSV(project);
-                break;
-            case 'json':
-                this.exportToJSON(project);
-                break;
-            case 'excel':
-                this.exportToExcel(project);
-                break;
-            default:
-                alert('Невалиден формат. Изберете csv, json или excel.');
+        try {
+            // Директен Excel export без prompt
+            console.log('📊 Стартиране на Excel експорт...');
+            console.log(`Проект с ${project.length} шкафа`);
+            
+            const success = await ExcelHandler.exportProjectToExcel(project);
+            
+            if (success) {
+                alert('✅ Проектът е експортиран успешно в Excel файл!');
+            }
+        } catch (error) {
+            console.error('Грешка при експорт:', error);
+            alert(`❌ Грешка при експорт: ${error.message}`);
         }
     },
 
-    // Експорт към CSV
+    // Стари експорт функции (запазени за backwards compatibility)
     exportToCSV(project) {
         const headers = ['ID', 'Тип', 'Ширина (mm)', 'Височина (mm)', 'Дълбочина (mm)', 'Рафтове', 'Врати', 'Чекмеджета', 'Кант корпус', 'Кант врати'];
         const rows = project.map(cabinet => [
@@ -148,7 +148,6 @@ export const Calculator = {
         alert('✅ Проектът е експортиран в CSV файл!');
     },
 
-    // Експорт към JSON
     exportToJSON(project) {
         const data = {
             project: project,
@@ -171,11 +170,6 @@ export const Calculator = {
         document.body.removeChild(link);
 
         alert('✅ Проектът е експортиран в JSON файл!');
-    },
-
-    // Експорт към Excel (използваме CSV с .xls разширение за простота)
-    exportToExcel(project) {
-        this.exportToCSV(project);
     },
 
     // Показване на резултат от проект
