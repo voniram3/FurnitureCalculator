@@ -1,7 +1,6 @@
 import { State } from './state.js';
 import { UI } from './ui.js';
 import { Api } from './api.js';
-import { ExcelHandler } from './excelHandler.js';
 
 // Калкулаторни функции
 export const Calculator = {
@@ -87,89 +86,545 @@ export const Calculator = {
         }
     },
 
-    // 🆕 ПОДОБРЕН Експорт на проект - Директно в Excel
-    async exportProject() {
+    // ДИРЕКТЕН EXCEL ЕКСПОРТ
+    exportProject() {
         const project = State.currentProject;
-        
         if (project.length === 0) {
             alert('⚠️ Няма данни за експорт!');
             return;
         }
 
         try {
-            // Директен Excel export без prompt
             console.log('📊 Стартиране на Excel експорт...');
-            console.log(`Проект с ${project.length} шкафа`);
-            
-            const success = await ExcelHandler.exportProjectToExcel(project);
-            
-            if (success) {
-                alert('✅ Проектът е експортиран успешно в Excel файл!');
-            }
+            this.exportToExcel(project);
         } catch (error) {
             console.error('Грешка при експорт:', error);
             alert(`❌ Грешка при експорт: ${error.message}`);
         }
     },
 
-    // Стари експорт функции (запазени за backwards compatibility)
-    exportToCSV(project) {
-        const headers = ['ID', 'Тип', 'Ширина (mm)', 'Височина (mm)', 'Дълбочина (mm)', 'Рафтове', 'Врати', 'Чекмеджета', 'Кант корпус', 'Кант врати'];
-        const rows = project.map(cabinet => [
-            cabinet.cabinet_id || '',
-            cabinet.type,
-            cabinet.width,
-            cabinet.height,
-            cabinet.depth,
-            cabinet.shelf_count || 0,
-            cabinet.door_count || 0,
-            cabinet.drawer_count || 0,
-            cabinet.body_edge || '1',
-            cabinet.door_edge || '2'
-        ]);
+    // Excel експорт с детайлна разбивка
+    exportToExcel(project) {
+        if (!window.XLSX) {
+            alert('❌ Грешка: Excel библиотеката не е заредена. Моля, презаредете страницата.');
+            return;
+        }
 
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        link.setAttribute('href', url);
-        link.setAttribute('download', `проект_${new Date().toISOString().slice(0, 10)}.csv`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        alert('✅ Проектът е експортиран в CSV файл!');
+        // Генериране на данни
+        const data = this.generateDetailedExportData(project);
+        
+        // Създаване на workbook
+        const wb = window.XLSX.utils.book_new();
+        const ws = window.XLSX.utils.aoa_to_sheet(data);
+        
+        // Автоматична ширина на колоните
+        ws['!cols'] = [
+            { wch: 40 }, // Име
+            { wch: 10 }, // Бройка
+            { wch: 20 }  // Размер
+        ];
+        
+        window.XLSX.utils.book_append_sheet(wb, ws, 'Детайлна разбивка');
+        
+        // Записване на файла
+        const filename = `Проект_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        window.XLSX.writeFile(wb, filename);
+        
+        alert('✅ Проектът е експортиран успешно в Excel файл!');
     },
 
-    exportToJSON(project) {
-        const data = {
-            project: project,
-            exportDate: new Date().toISOString(),
-            totalCabinets: project.length,
-            version: '3.0'
+    // Генериране на детайлни данни за експорт
+    generateDetailedExportData(project) {
+        const data = [];
+        
+        // Header
+        data.push(['Име', 'Бройка', 'Размер']);
+        
+        // За всеки шкаф
+        project.forEach((cabinet, index) => {
+            // Заглавие на шкафа
+            const cabinetName = this.getCabinetDisplayName(cabinet);
+            data.push([cabinetName, null, null]);
+            
+            // Генериране на елементите
+            const elements = this.generateCabinetElements(cabinet);
+            
+            // Добавяне на всеки елемент
+            elements.forEach(element => {
+                data.push([
+                    element.name,
+                    element.quantity,
+                    element.size
+                ]);
+            });
+            
+            // Празен ред между шкафовете (освен след последния)
+            if (index < project.length - 1) {
+                data.push(['', '', '']);
+            }
+        });
+        
+        // Сумарна таблица
+        data.push(['', '', '']);
+        data.push(['═══ СУМАРНО ═══', '', '']);
+        data.push(['', '', '']);
+        
+        const summary = this.generateDetailedSummary(project);
+        summary.forEach(item => {
+            data.push([item.category, item.value, item.details || '']);
+        });
+        
+        return data;
+    },
+
+    // Име на шкафа за показване
+    getCabinetDisplayName(cabinet) {
+        const typeNames = {
+            'base': 'Долен шкаф',
+            'upper': 'Горен шкаф',
+            'drawer': 'Долен шкаф чекмедже',
+            'oven': 'Долен шкаф фурна',
+            'sink': 'Долен шкаф мивка',
+            'blind': 'Долен глух шкаф',
+            'fridge': 'Колона хладилник',
+            'column': 'Колона'
         };
+        
+        const typeName = typeNames[cabinet.type] || cabinet.type;
+        return `${typeName} ${cabinet.width}мм`;
+    },
 
-        const jsonContent = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonContent], { type: 'application/json' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
+    // Генериране на елементите на шкаф
+    generateCabinetElements(cabinet) {
+        const elements = [];
+        const w = cabinet.width;
+        const h = cabinet.height;
+        const d = cabinet.depth;
+        const type = cabinet.type;
+        
+        // Страници
+        elements.push({
+            name: 'Страници',
+            quantity: 2,
+            size: `${h}x${d} мм`,
+            category: 'component'
+        });
+        
+        // Дъно и капак (за долни шкафове освен drawer)
+        if (type !== 'drawer' && type !== 'upper' && type !== 'fridge') {
+            const bottomWidth = w - 36;
+            
+            elements.push({
+                name: 'Дъно',
+                quantity: 1,
+                size: `${bottomWidth}x${d} мм`,
+                category: 'component'
+            });
+            
+            if (type === 'base' || type === 'sink' || type === 'blind') {
+                elements.push({
+                    name: 'Капак',
+                    quantity: 1,
+                    size: `${bottomWidth}x${d} мм`,
+                    category: 'component'
+                });
+            }
+        }
+        
+        // Дъна за drawer шкафове
+        if (type === 'drawer') {
+            const drawerCount = cabinet.drawer_count || 3;
+            elements.push({
+                name: 'Дъна',
+                quantity: drawerCount + 1,
+                size: `${w - 36}x${d} мм`,
+                category: 'component'
+            });
+        }
+        
+        // Стабилизатори
+        if (type === 'base' || type === 'sink' || type === 'oven' || type === 'drawer' || type === 'blind') {
+            let stabCount = 2;
+            if (type === 'sink' || w >= 800) {
+                stabCount = 3;
+            }
+            
+            elements.push({
+                name: 'Стабилизатори',
+                quantity: stabCount,
+                size: `${w - 36}x100 мм`,
+                category: 'component'
+            });
+        }
+        
+        // Рафтове
+        if (cabinet.shelf_count > 0) {
+            const shelfWidth = w - 50;
+            const shelfDepth = d - 30;
+            
+            elements.push({
+                name: cabinet.shelf_count === 1 ? 'Рафт' : 'Рафтове',
+                quantity: cabinet.shelf_count,
+                size: `${shelfWidth}x${shelfDepth} мм`,
+                category: 'component'
+            });
+        }
+        
+        // Врати / Вратички
+        if (cabinet.door_count > 0) {
+            const doorHeight = this.calculateDoorHeight(cabinet);
+            const doorWidth = this.calculateDoorWidth(cabinet);
+            
+            const doorName = (cabinet.door_count === 1 || type === 'oven') ? 'Вратичка' : 'Вратички';
+            
+            elements.push({
+                name: doorName,
+                quantity: cabinet.door_count,
+                size: `${doorWidth}x${doorHeight} мм`,
+                category: 'door'
+            });
+        }
+        
+        // Чекмеджета
+        if (cabinet.drawer_count > 0) {
+            const drawerHeight = Math.floor((h - 100) / cabinet.drawer_count) - 20;
+            const drawerWidth = w - 6;
+            
+            elements.push({
+                name: 'Чекмеджета',
+                quantity: cabinet.drawer_count,
+                size: `${drawerWidth}x${drawerHeight} мм`,
+                category: 'component'
+            });
+        }
+        
+        // Гръб
+        if (cabinet.has_back !== false) {
+            const backWidth = w - 40;
+            const backHeight = h - 4;
+            
+            elements.push({
+                name: 'Гръб',
+                quantity: 1,
+                size: `${backWidth}x${backHeight} мм`,
+                category: 'back'
+            });
+        }
+        
+        // Крака (само за долни шкафове)
+        if (type === 'base' || type === 'sink' || type === 'oven' || type === 'blind' || type === 'drawer') {
+            const legCount = w >= 800 ? 6 : 4;
+            elements.push({
+                name: 'Крака',
+                quantity: legCount,
+                size: null,
+                category: 'hardware'
+            });
+        }
+        
+        // Панти
+        if (cabinet.door_count > 0) {
+            elements.push({
+                name: 'Панти',
+                quantity: cabinet.door_count * 2,
+                size: null,
+                category: 'hardware'
+            });
+        }
+        
+        // Рафтодържачи
+        if (cabinet.shelf_count > 0) {
+            elements.push({
+                name: 'Рафтодържачи',
+                quantity: cabinet.shelf_count * 4,
+                size: null,
+                category: 'hardware'
+            });
+        }
+        
+        // Водачи за чекмеджета
+        if (cabinet.drawer_count > 0) {
+            elements.push({
+                name: 'Водачи',
+                quantity: cabinet.drawer_count * 2,
+                size: null,
+                category: 'hardware'
+            });
+        }
+        
+        return elements;
+    },
 
-        link.setAttribute('href', url);
-        link.setAttribute('download', `проект_${new Date().toISOString().slice(0, 10)}.json`);
-        link.style.visibility = 'hidden';
+    // Изчисляване на височина на врата
+    calculateDoorHeight(cabinet) {
+        const type = cabinet.type;
+        const h = cabinet.height;
+        
+        if (cabinet.custom_door_size && cabinet.door_height) {
+            return cabinet.door_height;
+        }
+        
+        if (type === 'base' || type === 'sink' || type === 'blind' || type === 'drawer') {
+            return h - 103; // 100mm цокъл + 3mm процеп
+        } else if (type === 'upper' || type === 'fridge' || type === 'column') {
+            return h - 3;
+        } else if (type === 'oven') {
+            return 145; // Малка вратичка
+        }
+        
+        return h - 3;
+    },
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // Изчисляване на ширина на врата
+    calculateDoorWidth(cabinet) {
+        const w = cabinet.width;
+        const doorCount = cabinet.door_count;
+        
+        if (cabinet.custom_door_size && cabinet.door_width) {
+            return cabinet.door_width;
+        }
+        
+        if (doorCount === 1) {
+            return w - 3;
+        } else if (doorCount === 2) {
+            return Math.floor((w - 3) / 2);
+        } else {
+            return Math.floor((w - 3) / doorCount);
+        }
+    },
 
-        alert('✅ Проектът е експортиран в JSON файл!');
+    // 🆕 ПОДРОБНО СУМАРНО С ГРУПИРАНЕ
+    generateDetailedSummary(project) {
+        const summary = [];
+        
+        // Събиране на всички елементи от всички шкафове
+        const allElements = [];
+        project.forEach(cabinet => {
+            const elements = this.generateCabinetElements(cabinet);
+            allElements.push(...elements);
+        });
+        
+        // 1. Основна информация
+        summary.push({
+            category: '📋 Основна информация',
+            value: '',
+            details: ''
+        });
+        
+        summary.push({
+            category: 'Общо шкафове',
+            value: project.length,
+            details: 'бр'
+        });
+        
+        // Групиране по тип шкаф
+        const typeGroups = {};
+        project.forEach(cabinet => {
+            const typeName = this.getCabinetDisplayName(cabinet).replace(/\s\d+мм$/, '');
+            typeGroups[typeName] = (typeGroups[typeName] || 0) + 1;
+        });
+        
+        Object.entries(typeGroups).forEach(([typeName, count]) => {
+            summary.push({
+                category: `  ${typeName}`,
+                value: count,
+                details: 'бр'
+            });
+        });
+        
+        summary.push({ category: '', value: '', details: '' });
+        
+        // 2. 🆕 КОМПОНЕНТИ ПО РАЗМЕР
+        summary.push({
+            category: '📐 Компоненти по размер',
+            value: '',
+            details: ''
+        });
+        
+        // Групиране по размер
+        const componentsBySize = {};
+        allElements.forEach(element => {
+            if (element.size && element.category === 'component') {
+                const key = element.size;
+                if (!componentsBySize[key]) {
+                    componentsBySize[key] = {
+                        size: key,
+                        count: 0,
+                        names: new Set()
+                    };
+                }
+                componentsBySize[key].count += element.quantity;
+                componentsBySize[key].names.add(element.name);
+            }
+        });
+        
+        // Сортиране по брой (най-много първи)
+        const sortedComponents = Object.values(componentsBySize)
+            .sort((a, b) => b.count - a.count);
+        
+        sortedComponents.forEach(comp => {
+            const namesStr = Array.from(comp.names).join(', ');
+            summary.push({
+                category: `  ${comp.size}`,
+                value: comp.count,
+                details: `бр (${namesStr})`
+            });
+        });
+        
+        summary.push({ category: '', value: '', details: '' });
+        
+        // 3. 🆕 ВРАТИ ПО РАЗМЕР
+        const doorsBySize = {};
+        allElements.forEach(element => {
+            if (element.category === 'door') {
+                const key = element.size;
+                if (!doorsBySize[key]) {
+                    doorsBySize[key] = 0;
+                }
+                doorsBySize[key] += element.quantity;
+            }
+        });
+        
+        if (Object.keys(doorsBySize).length > 0) {
+            summary.push({
+                category: '🚪 Врати/Вратички по размер',
+                value: '',
+                details: ''
+            });
+            
+            Object.entries(doorsBySize)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([size, count]) => {
+                    summary.push({
+                        category: `  ${size}`,
+                        value: count,
+                        details: 'бр'
+                    });
+                });
+            
+            summary.push({ category: '', value: '', details: '' });
+        }
+        
+        // 4. 🆕 ГРЪБОВЕ ПО РАЗМЕР
+        const backsBySize = {};
+        allElements.forEach(element => {
+            if (element.category === 'back') {
+                const key = element.size;
+                if (!backsBySize[key]) {
+                    backsBySize[key] = 0;
+                }
+                backsBySize[key] += element.quantity;
+            }
+        });
+        
+        if (Object.keys(backsBySize).length > 0) {
+            summary.push({
+                category: '⬜ Гръбове по размер',
+                value: '',
+                details: ''
+            });
+            
+            Object.entries(backsBySize)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([size, count]) => {
+                    summary.push({
+                        category: `  ${size}`,
+                        value: count,
+                        details: 'бр'
+                    });
+                });
+            
+            summary.push({ category: '', value: '', details: '' });
+        }
+        
+        // 5. 🆕 ХАРДУЕР
+        summary.push({
+            category: '🔩 Хардуер',
+            value: '',
+            details: ''
+        });
+        
+        // Групиране на хардуер
+        const hardwareGroups = {};
+        allElements.forEach(element => {
+            if (element.category === 'hardware') {
+                const name = element.name;
+                if (!hardwareGroups[name]) {
+                    hardwareGroups[name] = 0;
+                }
+                hardwareGroups[name] += element.quantity;
+            }
+        });
+        
+        // Показване на хардуер
+        const hardwareOrder = ['Крака', 'Панти', 'Рафтодържачи', 'Водачи'];
+        hardwareOrder.forEach(name => {
+            if (hardwareGroups[name]) {
+                summary.push({
+                    category: `  ${name}`,
+                    value: hardwareGroups[name],
+                    details: 'бр'
+                });
+            }
+        });
+        
+        summary.push({ category: '', value: '', details: '' });
+        
+        // 6. 🆕 КАНТОВЕ (приблизително)
+        summary.push({
+            category: '📏 Кантове (приблизително)',
+            value: '',
+            details: ''
+        });
+        
+        // Кант за корпус (всички компоненти освен врати и гръбове)
+        let bodyEdgeLength = 0;
+        allElements.forEach(element => {
+            if (element.size && (element.category === 'component')) {
+                const [w, h] = element.size.replace(' мм', '').split('x').map(Number);
+                if (w && h) {
+                    // Периметър на всеки елемент
+                    const perimeter = (w + h) * 2;
+                    bodyEdgeLength += (perimeter * element.quantity) / 1000; // в метри
+                }
+            }
+        });
+        
+        summary.push({
+            category: '  Кант за корпус',
+            value: bodyEdgeLength.toFixed(1),
+            details: 'м'
+        });
+        
+        // Кант за врати
+        let doorEdgeLength = 0;
+        allElements.forEach(element => {
+            if (element.size && element.category === 'door') {
+                const [w, h] = element.size.replace(' мм', '').split('x').map(Number);
+                if (w && h) {
+                    const perimeter = (w + h) * 2;
+                    doorEdgeLength += (perimeter * element.quantity) / 1000;
+                }
+            }
+        });
+        
+        if (doorEdgeLength > 0) {
+            summary.push({
+                category: '  Кант за врати/вратички',
+                value: doorEdgeLength.toFixed(1),
+                details: 'м'
+            });
+        }
+        
+        // Общо кантове
+        const totalEdge = bodyEdgeLength + doorEdgeLength;
+        summary.push({
+            category: '  Общо кантове',
+            value: totalEdge.toFixed(1),
+            details: 'м'
+        });
+        
+        return summary;
     },
 
     // Показване на резултат от проект
