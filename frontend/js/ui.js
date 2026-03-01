@@ -92,201 +92,287 @@ export const UI = {
                 <label for="has_back" class="checkbox-label">Шкафът има гръб</label>
             </div>
 
-            <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107; margin: 15px 0;">
-                <input type="checkbox" id="pages_between_panels" name="pages_between_panels">
-                <label for="pages_between_panels" class="checkbox-label" style="font-weight: bold; color: #856404;">
-                    📐 Страници между дъно/капак (без стабилизатори)
-                </label>
-                <div style="font-size: 0.85em; color: #856404; margin-top: 5px; margin-left: 25px;">
-                    <strong>Метод 2:</strong> Страниците са по-ниски (h-36) и се слагат между дъно и капак.<br>
-                    Дъно и капак са с пълна ширина. <strong>Няма стабилизатори.</strong>
-                </div>
-            </div>
-
             <div class="form-group">
                 <input type="checkbox" id="custom_door_size" name="custom_door_size">
                 <label for="custom_door_size" class="checkbox-label">Персонализирани размери на врати</label>
             </div>
 
             <div id="customDoorSection" class="custom-door-size" style="display: none;">
-                <h4 style="margin: 10px 0; color: #667eea;">Размери на врати</h4>
+                <h4 style="color: #ffc107; margin-bottom: 10px;">Размери на врати (mm)</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="door_width">Ширина на врата:</label>
-                        <input type="number" id="door_width" name="door_width" min="50">
+                        <input type="number" id="door_width" name="door_width" placeholder="автоматично">
                     </div>
                     <div class="form-group">
                         <label for="door_height">Височина на врата:</label>
-                        <input type="number" id="door_height" name="door_height" min="50">
+                        <input type="number" id="door_height" name="door_height" placeholder="автоматично">
                     </div>
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button type="button" class="btn" id="calculateBtn">💰 Изчисли шкаф</button>
+            <div style="margin-top: 20px;">
+                <button type="button" class="btn" id="calculateCabinetBtn">🧮 Изчисли</button>
                 <button type="button" class="btn btn-success" id="addToProjectBtn">➕ Добави към проект</button>
                 <button type="reset" class="btn btn-secondary">🔄 Изчисти</button>
             </div>
         `;
+    },
 
-        // Event listener за показване на custom door fields
-        const customDoorCheckbox = document.getElementById('custom_door_size');
-        const customDoorSection = document.getElementById('customDoorSection');
-        
-        if (customDoorCheckbox && customDoorSection) {
-            customDoorCheckbox.addEventListener('change', (e) => {
-                customDoorSection.style.display = e.target.checked ? 'block' : 'none';
-            });
-        }
+    // Връзване на събития
+    bindEvents() {
+        // Табове
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', (e) => this.switchTab(e));
+        });
 
-        // Event listener за промяна на тип шкаф
+        // Кабинет превю
         const typeSelect = document.getElementById('type');
         if (typeSelect) {
-            typeSelect.addEventListener('change', (e) => {
-                this.updateCabinetPreview(e.target.value);
-                this.updateFormDefaultsByType(e.target.value);
-            });
+            typeSelect.addEventListener('change', () => this.updateCabinetPreview());
+        }
+
+        // Персонализирани врати
+        const customDoorCheck = document.getElementById('custom_door_size');
+        if (customDoorCheck) {
+            customDoorCheck.addEventListener('change', () => this.toggleCustomDoorSize());
+        }
+
+        // Бутони
+        const calculateBtn = document.getElementById('calculateCabinetBtn');
+        if (calculateBtn) calculateBtn.addEventListener('click', () => window.Calculator.calculateCabinet());
+
+        const addToProjectBtn = document.getElementById('addToProjectBtn');
+        if (addToProjectBtn) addToProjectBtn.addEventListener('click', () => this.addToProject());
+
+        const calculateProjectBtn = document.getElementById('calculateProjectBtn');
+        if (calculateProjectBtn) calculateProjectBtn.addEventListener('click', () => window.Calculator.calculateProject());
+
+        const exportProjectBtn = document.getElementById('exportProjectBtn');
+        if (exportProjectBtn) exportProjectBtn.addEventListener('click', () => window.Calculator.exportProject());
+
+        const clearProjectBtn = document.getElementById('clearProjectBtn');
+        if (clearProjectBtn) clearProjectBtn.addEventListener('click', () => this.clearProject());
+
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', () => this.clearHistory());
+    },
+
+    // Превключване на табове
+    switchTab(event) {
+        const tabName = event.target.getAttribute('data-tab');
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            event.target.classList.add('active');
+
+            // Специални действия при смяна на таб
+            if (tabName === 'project') this.updateProjectDisplay();
+            if (tabName === 'history') this.loadHistory();
+            if (tabName === 'pricing') {
+                // Инициализираме секциите за ценообразуване ако все още не са
+                if (!document.querySelector('.collapsible')) {
+                    window.Tables.renderPricingSections();
+                }
+            }
         }
     },
 
-    // Актуализиране на превюто на шкафа
-    updateCabinetPreview(type) {
-        const cabinetInfo = cabinetTypes[type];
-        if (!cabinetInfo) return;
-
-        const icon = document.getElementById('cabinetIcon');
-        const name = document.getElementById('cabinetTypeName');
-        const description = document.getElementById('cabinetDescription');
-
-        if (icon) icon.textContent = cabinetInfo.icon;
-        if (name) name.textContent = cabinetInfo.name;
-        if (description) description.textContent = cabinetInfo.description;
-    },
-
-    // Актуализиране на стойностите по подразбиране според типа
-    updateFormDefaultsByType(type) {
-        const cabinetInfo = cabinetTypes[type];
-        if (!cabinetInfo) return;
-
-        // Променяме стойностите само ако полето е празно или има стойността по подразбиране
-        const widthInput = document.getElementById('width');
-        const heightInput = document.getElementById('height');
-        const depthInput = document.getElementById('depth');
-        const shelfInput = document.getElementById('shelf_count');
-        const doorInput = document.getElementById('door_count');
-        const drawerInput = document.getElementById('drawer_count');
-
-        if (widthInput) widthInput.value = cabinetInfo.defaultWidth;
-        if (heightInput) heightInput.value = cabinetInfo.defaultHeight;
-        if (depthInput) depthInput.value = cabinetInfo.defaultDepth;
-        if (shelfInput) shelfInput.value = cabinetInfo.defaultShelves;
-        if (doorInput) doorInput.value = cabinetInfo.defaultDoors;
-        if (drawerInput) drawerInput.value = cabinetInfo.defaultDrawers;
-    },
-
-    // Актуализиране на показването на проекта
-    updateProjectDisplay() {
-        const projectList = document.getElementById('projectCabinetList');
-        const projectCount = document.getElementById('projectCabinetCount');
-        
-        if (!projectList) return;
-
-        if (projectCount) {
-            projectCount.textContent = State.currentProject.length;
-        }
-
-        if (State.currentProject.length === 0) {
-            projectList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Няма шкафове в проекта. Добавете шкаф от калкулатора.</p>';
+    // Обновяване на preview на шкафа
+    updateCabinetPreview() {
+        const type = document.getElementById('type')?.value;
+        if (!type || !cabinetTypes[type]) {
+            document.getElementById('cabinetIcon').textContent = '📦';
+            document.getElementById('cabinetTypeName').textContent = 'Изберете тип шкаф';
+            document.getElementById('cabinetDescription').textContent = 'Изберете тип от менюто';
             return;
         }
 
-        projectList.innerHTML = State.currentProject.map((cabinet, index) => {
-            const cabinetInfo = cabinetTypes[cabinet.type] || {};
-            return `
-                <div class="project-cabinet-item">
-                    <div class="cabinet-item-icon">${cabinetInfo.icon || '📦'}</div>
-                    <div class="cabinet-item-info">
-                        <strong>${cabinet.cabinet_id || `Шкаф ${index + 1}`}</strong>
-                        <div class="cabinet-item-details">
-                            ${cabinetInfo.name || cabinet.type} | 
-                            ${cabinet.width}×${cabinet.height}×${cabinet.depth}mm |
-                            Рафтове: ${cabinet.shelf_count || 0} |
-                            Врати: ${cabinet.door_count || 0}
-                            ${cabinet.pages_between_panels ? ' | <span style="color: #856404;">📐 М2</span>' : ''}
-                        </div>
-                    </div>
-                    <div class="cabinet-item-actions">
-                        <button class="btn btn-sm btn-danger" onclick="window.removeCabinetFromProject(${index})">🗑️</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        const config = cabinetTypes[type];
+        document.getElementById('cabinetIcon').textContent = config.icon;
+        document.getElementById('cabinetTypeName').textContent = config.name;
+        document.getElementById('cabinetDescription').textContent = config.description;
+
+        // Автоматично попълване на стойности
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const depthInput = document.getElementById('depth');
+        const shelvesInput = document.getElementById('shelf_count');
+        const doorsInput = document.getElementById('door_count');
+        const drawersInput = document.getElementById('drawer_count');
+
+        if (widthInput) widthInput.value = config.defaultWidth;
+        if (heightInput) heightInput.value = config.defaultHeight;
+        if (depthInput) depthInput.value = config.defaultDepth;
+        if (shelvesInput) shelvesInput.value = config.defaultShelves;
+        if (doorsInput) doorsInput.value = config.defaultDoors;
+        if (drawersInput) drawersInput.value = config.defaultDrawers;
+
+        // Анимация
+        const card = document.getElementById('cabinetPreviewCard');
+        if (card) {
+            card.style.animation = 'none';
+            setTimeout(() => {
+                card.style.animation = 'pulse 0.5s ease';
+            }, 10);
+        }
+    },
+
+    // Показване/скриване на персонализирани врати
+    toggleCustomDoorSize() {
+        const checkbox = document.getElementById('custom_door_size');
+        const section = document.getElementById('customDoorSection');
+        if (checkbox && section) {
+            section.style.display = checkbox.checked ? 'block' : 'none';
+        }
     },
 
     // Показване на резултат
     showResult(data) {
-        const resultDisplay = document.getElementById('resultDisplay');
         const resultContent = document.getElementById('resultContent');
-        
-        if (!resultDisplay || !resultContent) return;
+        const resultDisplay = document.getElementById('resultDisplay');
 
-        resultDisplay.style.display = 'block';
-        
-        let html = '<div class="result-summary">';
-        
-        if (data.cabinet_details) {
-            html += `
-                <h5>Информация за шкафа</h5>
-                <p><strong>Тип:</strong> ${data.cabinet_details.type || 'N/A'}</p>
-                <p><strong>Размери:</strong> ${data.cabinet_details.width}×${data.cabinet_details.height}×${data.cabinet_details.depth} mm</p>
-            `;
-        }
+        if (!resultContent || !resultDisplay) return;
 
-        if (data.material_breakdown) {
-            html += '<h5>Материали</h5><ul>';
-            Object.entries(data.material_breakdown).forEach(([material, area]) => {
-                html += `<li>${material}: ${area.toFixed(2)} m²</li>`;
+        let html = `
+            <div class="result-item">
+                <span class="result-label">Шкаф ID:</span>
+                <span class="result-value">${data.cabinet_id || 'N/A'}</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Тип:</span>
+                <span class="result-value">${cabinetTypes[data.type]?.name || data.type}</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Обща цена:</span>
+                <span class="result-value" style="font-size: 1.3em; color: #4caf50; font-weight: bold;">
+                    ${data.total_cost_bgn ? data.total_cost_bgn.toFixed(2) : '0.00'} лв
+                </span>
+            </div>
+        `;
+
+        if (data.panels && data.panels.length > 0) {
+            html += '<h5 style="margin-top: 20px; color: #667eea;">Панели:</h5><ul>';
+            data.panels.forEach(panel => {
+                html += `<li>${panel.name}: ${panel.width}×${panel.height}mm (${panel.quantity}бр)</li>`;
             });
             html += '</ul>';
         }
 
-        if (data.hardware_list) {
-            html += '<h5>Хардуер</h5><ul>';
-            Object.entries(data.hardware_list).forEach(([item, quantity]) => {
-                html += `<li>${item}: ${quantity} бр</li>`;
-            });
-            html += '</ul>';
-        }
-
-        if (data.total_cost) {
-            html += `<h5 style="color: #667eea;">Обща цена: ${data.total_cost.toFixed(2)} лв</h5>`;
-        }
-
-        html += '</div>';
         resultContent.innerHTML = html;
+        resultDisplay.style.display = 'block';
+
+        // Скриваме грешките
+        const errorDisplay = document.getElementById('errorDisplay');
+        if (errorDisplay) errorDisplay.style.display = 'none';
     },
 
     // Показване на грешка
     showError(message) {
-        const errorDisplay = document.getElementById('errorDisplay');
         const errorContent = document.getElementById('errorContent');
-        
-        if (!errorDisplay || !errorContent) return;
+        const errorDisplay = document.getElementById('errorDisplay');
 
-        if (!message) {
-            errorDisplay.style.display = 'none';
-            return;
+        if (errorContent && errorDisplay) {
+            errorContent.textContent = message;
+            errorDisplay.style.display = 'block';
         }
 
-        errorDisplay.style.display = 'block';
-        errorContent.textContent = message;
+        // Скриваме резултатите
+        const resultDisplay = document.getElementById('resultDisplay');
+        if (resultDisplay) resultDisplay.style.display = 'none';
     },
 
-    // Показване на спинър
-    showLoading(show) {
+    // Зареждане/скриване на спинър
+    showLoading(show = true) {
         const spinner = document.getElementById('loadingSpinner');
         if (spinner) {
             spinner.style.display = show ? 'block' : 'none';
+        }
+    },
+
+    // Обновяване на дисплея на проекта
+    updateProjectDisplay() {
+        const count = State.getProjectCount();
+        const countElement = document.getElementById('projectCabinetCount');
+        const listElement = document.getElementById('projectCabinetList');
+
+        if (countElement) countElement.textContent = count;
+
+        if (listElement) {
+            if (count === 0) {
+                listElement.innerHTML = '<p style="color: #999;">Няма добавени шкафове</p>';
+                return;
+            }
+
+            let html = '';
+            State.currentProject.forEach((cabinet, index) => {
+                const config = cabinetTypes[cabinet.type] || {};
+                html += `
+                    <div class="cabinet-list-item">
+                        <div>
+                            <span style="font-size: 1.5em;">${config.icon || '📦'}</span>
+                            <strong>${config.name || cabinet.type}</strong>
+                            - ${cabinet.width}×${cabinet.height}×${cabinet.depth}mm
+                            ${cabinet.cabinet_id ? `<br><small>ID: ${cabinet.cabinet_id}</small>` : ''}
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="window.UI.removeFromProject(${index})">🗑️</button>
+                    </div>
+                `;
+            });
+            listElement.innerHTML = html;
+        }
+    },
+
+    // Добавяне на шкаф към проект
+    addToProject() {
+        const type = document.getElementById('type')?.value;
+        if (!type) {
+            alert('Моля, изберете тип шкаф!');
+            return;
+        }
+
+        const cabinet = {
+            type: type,
+            width: parseInt(document.getElementById('width').value) || 0,
+            height: parseInt(document.getElementById('height').value) || 0,
+            depth: parseInt(document.getElementById('depth').value) || 0,
+            cabinet_id: document.getElementById('cabinet_id').value || `cabinet_${Date.now()}`,
+            body_edge: document.getElementById('body_edge').value,
+            door_edge: document.getElementById('door_edge').value,
+            shelf_count: parseInt(document.getElementById('shelf_count').value) || 0,
+            door_count: parseInt(document.getElementById('door_count').value) || 0,
+            drawer_count: parseInt(document.getElementById('drawer_count').value) || 0,
+            has_back: document.getElementById('has_back').checked,
+            custom_door_width: document.getElementById('door_width')?.value,
+            custom_door_height: document.getElementById('door_height')?.value
+        };
+
+        State.addToProject(cabinet);
+        alert(`✅ Шкаф добавен към проекта!\n\nОбщо шкафове: ${State.getProjectCount()}`);
+        this.updateProjectDisplay();
+    },
+
+    // Премахване от проект
+    removeFromProject(index) {
+        if (confirm('Сигурни ли сте, че искате да премахнете този шкаф от проекта?')) {
+            State.removeFromProject(index);
+            this.updateProjectDisplay();
+        }
+    },
+
+    // Изчистване на проект
+    clearProject() {
+        if (confirm('⚠️ Сигурни ли сте, че искате да изчистите целия проект? Това действие не може да бъде отменено.')) {
+            State.clearProject();
+            this.updateProjectDisplay();
+            alert('✅ Проектът е изчистен!');
         }
     },
 
@@ -295,108 +381,50 @@ export const UI = {
         const historyList = document.getElementById('historyList');
         if (!historyList) return;
 
-        if (State.calculationHistory.length === 0) {
-            historyList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Няма история на изчисления.</p>';
+        const history = State.calculationHistory;
+        if (history.length === 0) {
+            historyList.innerHTML = '<p style="color: #999;">Няма записани изчисления</p>';
             return;
         }
 
-        historyList.innerHTML = State.calculationHistory.map((item, index) => {
-            const date = new Date(item.timestamp);
-            const formattedDate = date.toLocaleString('bg-BG');
-            
-            return `
-                <div class="history-item">
-                    <div class="history-item-header">
-                        <strong>${item.formData?.cabinet_id || `Изчисление ${index + 1}`}</strong>
-                        <span class="history-item-date">${formattedDate}</span>
+        let html = '<ul style="list-style: none; padding: 0;">';
+        history.forEach(entry => {
+            const date = new Date(entry.timestamp).toLocaleString('bg-BG');
+            const type = entry.data?.type || 'Неизвестен';
+            const config = cabinetTypes[type] || {};
+            const price = entry.data?.total_cost_bgn ? entry.data.total_cost_bgn.toFixed(2) : 'N/A';
+
+            html += `
+                <li class="cabinet-list-item">
+                    <div>
+                        <span style="font-size: 1.5em; margin-right: 10px;">${config.icon || '📦'}</span>
+                        <strong>${date}</strong><br>
+                        <small>ID: ${entry.data?.cabinet_id || 'Без ID'} | Тип: ${config.name || type} | Цена: ${price} лв.</small>
                     </div>
-                    <div class="history-item-details">
-                        ${item.type === 'project' ? 
-                            `Проект с ${item.cabinetCount} шкафа` : 
-                            `${item.formData?.type || 'N/A'} | ${item.formData?.width}×${item.formData?.height}×${item.formData?.depth}mm`
-                        }
-                    </div>
-                </div>
+                    <button class="btn btn-secondary btn-small" onclick="window.UI.viewHistoryDetail('${entry.id}')">👁️ Детайли</button>
+                </li>
             `;
-        }).join('');
+        });
+        html += '</ul>';
+        historyList.innerHTML = html;
     },
 
-    // Event binding
-    bindEvents() {
-        // Calculate button
-        const calculateBtn = document.getElementById('calculateBtn');
-        if (calculateBtn) {
-            calculateBtn.addEventListener('click', () => {
-                if (window.Calculator) {
-                    window.Calculator.calculateCabinet();
-                }
-            });
+    // Изчистване на история
+    clearHistory() {
+        if (confirm('⚠️ Сигурни ли сте, че искате да изчистите цялата история? Това действие не може да бъде отменено.')) {
+            State.clearHistory();
+            this.loadHistory();
+            alert('✅ Историята е изчистена!');
         }
+    },
 
-        // Add to project button
-        const addToProjectBtn = document.getElementById('addToProjectBtn');
-        if (addToProjectBtn) {
-            addToProjectBtn.addEventListener('click', () => {
-                if (window.Calculator) {
-                    const formData = window.Calculator.getCabinetFormData();
-                    if (formData && window.Calculator.validateCabinetData(formData)) {
-                        State.addToProject(formData);
-                        this.updateProjectDisplay();
-                        alert('✅ Шкафът е добавен към проекта!');
-                    }
-                }
-            });
+    // Преглед на детайли от история
+    viewHistoryDetail(id) {
+        const entry = State.calculationHistory.find(item => item.id === id);
+        if (entry) {
+            const detail = JSON.stringify(entry, null, 2);
+            alert('Детайли на изчислението:\n\n' + detail);
         }
-
-        // Calculate project button
-        const calculateProjectBtn = document.getElementById('calculateProjectBtn');
-        if (calculateProjectBtn) {
-            calculateProjectBtn.addEventListener('click', () => {
-                if (window.Calculator) {
-                    window.Calculator.calculateProject();
-                }
-            });
-        }
-
-        // Export project button
-        const exportProjectBtn = document.getElementById('exportProjectBtn');
-        if (exportProjectBtn) {
-            exportProjectBtn.addEventListener('click', () => {
-                if (window.Calculator) {
-                    window.Calculator.exportProject();
-                }
-            });
-        }
-
-        // Clear project button
-        const clearProjectBtn = document.getElementById('clearProjectBtn');
-        if (clearProjectBtn) {
-            clearProjectBtn.addEventListener('click', () => {
-                if (confirm('Сигурни ли сте, че искате да изчистите проекта?')) {
-                    State.clearProject();
-                    this.updateProjectDisplay();
-                }
-            });
-        }
-
-        // Clear history button
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        if (clearHistoryBtn) {
-            clearHistoryBtn.addEventListener('click', () => {
-                if (confirm('Сигурни ли сте, че искате да изчистите историята?')) {
-                    State.clearHistory();
-                    this.loadHistory();
-                }
-            });
-        }
-    }
-};
-
-// Глобална функция за премахване на шкаф от проекта
-window.removeCabinetFromProject = (index) => {
-    if (confirm('Сигурни ли сте, че искате да премахнете този шкаф?')) {
-        State.removeFromProject(index);
-        UI.updateProjectDisplay();
     }
 };
 
