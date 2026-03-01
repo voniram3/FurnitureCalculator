@@ -92,6 +92,17 @@ export const UI = {
                 <label for="has_back" class="checkbox-label">Шкафът има гръб</label>
             </div>
 
+            <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107; margin: 15px 0;">
+                <input type="checkbox" id="pages_between_panels" name="pages_between_panels">
+                <label for="pages_between_panels" class="checkbox-label" style="font-weight: bold; color: #856404;">
+                    📐 Страници между дъно/капак (без стабилизатори)
+                </label>
+                <div style="font-size: 0.85em; color: #856404; margin-top: 5px; margin-left: 25px;">
+                    <strong>Метод 2:</strong> Страниците са по-ниски (h-36) и се слагат между дъно и капак.<br>
+                    Дъно и капак са с пълна ширина. <strong>Няма стабилизатори.</strong>
+                </div>
+            </div>
+
             <div class="form-group">
                 <input type="checkbox" id="custom_door_size" name="custom_door_size">
                 <label for="custom_door_size" class="checkbox-label">Персонализирани размери на врати</label>
