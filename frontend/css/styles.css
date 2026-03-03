@@ -218,6 +218,7 @@ input[type="checkbox"] {
     transform: rotate(180deg);
 }
 
+/* 🔧 ФИКС ЗА COLLAPSIBLE - ДИНАМИЧНА ВИСОЧИНА */
 .collapsible-content {
     max-height: 0;
     overflow: hidden;
@@ -225,6 +226,12 @@ input[type="checkbox"] {
     background: #f9f9f9;
     border-radius: 0 0 8px 8px;
     margin-bottom: 15px;
+}
+
+/* 🆕 Когато е отворена, позволява динамично разширяване */
+.collapsible-content.expanded {
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 .collapsible-content-inner {
@@ -290,6 +297,8 @@ input[type="checkbox"] {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 2px dashed #ddd;
+    /* 🆕 Осигурява място за бутона */
+    min-height: 60px;
 }
 
 .profile-selector {
