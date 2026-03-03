@@ -1,5 +1,6 @@
 import { defaultMaterials, installationServices, laborOperations } from '../data/cabinetTypes.js';
 import { State } from './state.js';
+import { Calculator } from './calculator.js';
 
 // Операции с таблици и изчисления
 export const Tables = {
@@ -156,7 +157,7 @@ export const Tables = {
                         <thead>
                             <tr>
                                 <th>Операция</th>
-                                <th>Линеен метър</th>
+                                <th>Линеен метър / Брой</th>
                                 <th>Цена/м</th>
                                 <th>Обща цена</th>
                                 <th>🗑️</th>
@@ -175,7 +176,7 @@ export const Tables = {
             <button type="button" class="collapsible active">
                 📊 Обща калкулация
             </button>
-            <div class="collapsible-content" style="max-height: 1000px;">
+            <div class="collapsible-content" style="max-height: none;">
                 <div class="collapsible-content-inner">
                     <table class="price-table">
                         <tbody>
@@ -237,9 +238,9 @@ export const Tables = {
             html += `
                 <tr data-service-id="${index}">
                     <td><input type="text" value="${service.name}" class="service-name" data-index="${index}"></td>
-                    <td><input type="number" value="1" min="0" step="1" class="service-qty" data-index="${index}"></td>
+                    <td><input type="number" value="0" min="0" step="1" class="service-qty" data-index="${index}"></td>
                     <td><input type="number" value="${service.price.toFixed(2)}" min="0" step="0.01" class="service-price" data-index="${index}"></td>
-                    <td class="row-total service-total">${service.price.toFixed(2)} лв</td>
+                    <td class="row-total service-total">0.00 лв</td>
                     <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
                 </tr>
             `;
@@ -298,13 +299,28 @@ export const Tables = {
             button.addEventListener('click', function() {
                 this.classList.toggle('active');
                 const content = this.nextElementSibling;
-                if (content.style.maxHeight) {
+                if (content.style.maxHeight && content.style.maxHeight !== 'none') {
                     content.style.maxHeight = null;
                 } else {
                     content.style.maxHeight = content.scrollHeight + "px";
                 }
             });
         });
+    },
+
+    // 🆕 ФУНКЦИЯ ЗА ОБНОВЯВАНЕ НА ВИСОЧИНАТА НА COLLAPSIBLE SECTION
+    updateCollapsibleHeight(button) {
+        if (!button) return;
+        
+        const collapsible = button.closest('.collapsible-content-inner')
+                                  ?.parentElement;
+        
+        if (collapsible && collapsible.classList.contains('collapsible-content')) {
+            // Само ако секцията е отворена (има max-height)
+            if (collapsible.style.maxHeight && collapsible.style.maxHeight !== 'none') {
+                collapsible.style.maxHeight = collapsible.scrollHeight + "px";
+            }
+        }
     },
 
     // Изчисляване на ред от материали
@@ -428,6 +444,12 @@ export const Tables = {
             <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
         `;
         tbody.appendChild(newRow);
+        
+        // 🆕 ОБНОВЯВАНЕ НА ВИСОЧИНАТА
+        const addButton = event?.target;
+        if (addButton) {
+            setTimeout(() => this.updateCollapsibleHeight(addButton), 100);
+        }
     },
 
     // Добавяне на ред за монтаж
@@ -444,6 +466,12 @@ export const Tables = {
             <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
         `;
         tbody.appendChild(newRow);
+        
+        // 🆕 ОБНОВЯВАНЕ НА ВИСОЧИНАТА
+        const addButton = event?.target;
+        if (addButton) {
+            setTimeout(() => this.updateCollapsibleHeight(addButton), 100);
+        }
     },
 
     // Добавяне на ред за труд
@@ -460,6 +488,12 @@ export const Tables = {
             <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
         `;
         tbody.appendChild(newRow);
+        
+        // 🆕 ОБНОВЯВАНЕ НА ВИСОЧИНАТА
+        const addButton = event?.target;
+        if (addButton) {
+            setTimeout(() => this.updateCollapsibleHeight(addButton), 100);
+        }
     },
 
     // Изтриване на ред
@@ -468,6 +502,9 @@ export const Tables = {
         if (row && confirm('Сигурни ли сте, че искате да изтриете този ред?')) {
             row.remove();
             this.calculateTotals();
+            
+            // 🆕 ОБНОВЯВАНЕ НА ВИСОЧИНАТА СЛЕД ИЗТРИВАНЕ
+            setTimeout(() => this.updateCollapsibleHeight(button), 100);
         }
     },
 
@@ -475,39 +512,151 @@ export const Tables = {
     toggleCollapsible(element) {
         element.classList.toggle('active');
         const content = element.nextElementSibling;
-        if (content.style.maxHeight) {
+        if (content.style.maxHeight && content.style.maxHeight !== 'none') {
             content.style.maxHeight = null;
         } else {
             content.style.maxHeight = content.scrollHeight + "px";
         }
     },
 
-    // Автоматично изчисление от проект
+    // 🆕 ПОДОБРЕНО АВТОМАТИЧНО ИЗЧИСЛЕНИЕ ОТ ПРОЕКТ
     autoCalculateFromProject() {
         const project = State.currentProject;
-        if (project.length === 0) {
-            alert('Няма шкафове в проекта за автоматично изчисление!');
+        if (!project || project.length === 0) {
+            alert('⚠️ Няма шкафове в проекта за автоматично изчисление!');
             return;
         }
 
-        // Изчисляване на монтаж на модули
-        const moduleCount = project.length;
-        const moduleRow = document.querySelector('#installationTable [value*="монтаж на модул"]')?.closest('tr');
-        if (moduleRow) {
-            const qtyInput = moduleRow.querySelector('.service-qty');
-            if (qtyInput) qtyInput.value = moduleCount;
-        }
+        console.log(`📊 Авто изчисление за ${project.length} шкафа...`);
 
-        // Преизчисляване на тоталите
+        // Събиране на всички елементи от всички шкафове
+        let totalComponents = 0;
+        let totalDrawers = 0;
+        let totalHinges = 0;
+        let totalShelves = 0;
+        let totalEdgeLength = 0; // в метри
+        let totalBodyEdge = 0;
+        let totalDoorEdge = 0;
+
+        project.forEach(cabinet => {
+            // Генериране на елементите за този шкаф
+            const elements = Calculator.generateCabinetElements ? 
+                            Calculator.generateCabinetElements(cabinet) : [];
+            
+            elements.forEach(element => {
+                totalComponents += element.quantity || 0;
+                
+                // Броене на специфични елементи
+                if (element.name === 'Чекмеджета') {
+                    totalDrawers += element.quantity || 0;
+                }
+                if (element.name === 'Панти') {
+                    totalHinges += element.quantity || 0;
+                }
+                if (element.name === 'Рафтове' || element.name === 'Рафт') {
+                    totalShelves += element.quantity || 0;
+                }
+                
+                // Изчисляване на кантове
+                if (element.size && element.category) {
+                    const [w, h] = element.size.replace(' мм', '').split('x').map(Number);
+                    if (w && h) {
+                        const perimeter = (w + h) * 2 / 1000; // в метри
+                        const totalLength = perimeter * (element.quantity || 0);
+                        
+                        if (element.category === 'door') {
+                            totalDoorEdge += totalLength;
+                        } else if (element.category === 'component') {
+                            totalBodyEdge += totalLength;
+                        }
+                    }
+                }
+            });
+        });
+
+        totalEdgeLength = totalBodyEdge + totalDoorEdge;
+
+        console.log(`  Компоненти: ${totalComponents}`);
+        console.log(`  Чекмеджета: ${totalDrawers}`);
+        console.log(`  Панти: ${totalHinges}`);
+        console.log(`  Рафтове: ${totalShelves}`);
+        console.log(`  Кант корпус: ${totalBodyEdge.toFixed(2)}м`);
+        console.log(`  Кант врати: ${totalDoorEdge.toFixed(2)}м`);
+
+        // ПОПЪЛВАНЕ НА ТРУД
+        const laborRows = document.querySelectorAll('#laborTableBody tr');
+        laborRows.forEach(row => {
+            const nameInput = row.querySelector('.operation-name');
+            const qtyInput = row.querySelector('.operation-qty');
+            
+            if (!nameInput || !qtyInput) return;
+            
+            const operationName = nameInput.value.toLowerCase();
+            
+            // Сглобяване на модули = брой шкафове
+            if (operationName.includes('сглобяване') && operationName.includes('модул')) {
+                qtyInput.value = project.length;
+                this.calculateOperationRow(qtyInput);
+            }
+            
+            // Рязане = общ брой компоненти
+            if (operationName.includes('рязане') && !operationName.includes('криволинейно')) {
+                qtyInput.value = totalComponents;
+                this.calculateOperationRow(qtyInput);
+            }
+            
+            // Кантиране корпус (1мм)
+            if (operationName.includes('кантиране') && operationName.includes('0,8')) {
+                qtyInput.value = totalBodyEdge.toFixed(2);
+                this.calculateOperationRow(qtyInput);
+            }
+            
+            // Кантиране врати (2мм)
+            if (operationName.includes('кантиране') && operationName.includes('1 до 2')) {
+                qtyInput.value = totalDoorEdge.toFixed(2);
+                this.calculateOperationRow(qtyInput);
+            }
+            
+            // Монтаж на чекмедже
+            if (operationName.includes('монтаж') && operationName.includes('чекмедже')) {
+                qtyInput.value = totalDrawers;
+                this.calculateOperationRow(qtyInput);
+            }
+        });
+
+        // ПОПЪЛВАНЕ НА МОНТАЖ
+        const installationRows = document.querySelectorAll('#installationTableBody tr');
+        installationRows.forEach(row => {
+            const nameInput = row.querySelector('.service-name');
+            const qtyInput = row.querySelector('.service-qty');
+            
+            if (!nameInput || !qtyInput) return;
+            
+            const serviceName = nameInput.value.toLowerCase();
+            
+            // Монтаж на модули = брой шкафове
+            if (serviceName.includes('монтаж') && serviceName.includes('модул')) {
+                qtyInput.value = project.length;
+                this.calculateServiceRow(qtyInput);
+            }
+        });
+
+        // Преизчисляване на всички тотали
         this.calculateTotals();
-        alert('Автоматичното изчисление от проекта е завършено!');
+        
+        alert(`✅ Автоматично изчисление завършено!\n\n` +
+              `📦 Шкафове: ${project.length} бр\n` +
+              `🔨 Компоненти: ${totalComponents} бр\n` +
+              `📏 Кант корпус: ${totalBodyEdge.toFixed(2)} м\n` +
+              `📏 Кант врати: ${totalDoorEdge.toFixed(2)} м\n` +
+              `🗃️ Чекмеджета: ${totalDrawers} бр`);
     },
 
     // Обновяване на списъка с профили
     updateProfilesList() {
         const profilesList = document.getElementById('savedProfilesList');
         if (profilesList) {
-            const names = Object.keys(State.pricingProfiles);
+            const names = Object.keys(State.pricingProfiles || {});
             profilesList.textContent = names.length > 0 ? names.join(', ') : 'няма';
         }
     },
@@ -574,7 +723,7 @@ export const Tables = {
             return;
         }
 
-        if (!State.pricingProfiles[name]) {
+        if (!State.pricingProfiles || !State.pricingProfiles[name]) {
             alert(`Профил "${name}" не съществува!`);
             return;
         }
