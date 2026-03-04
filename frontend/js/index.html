@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мебелен Калкулатор - Професионално издание v3.0</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🪑 Мебелен Калкулатор v3.0</h1>
+            <p class="subtitle">Професионален инструмент за изчисление на кухненски шкафове</p>
+        </header>
+
+        <!-- Навигационни табове -->
+        <div class="tabs">
+            <div class="tab active" data-tab="calculator">📐 Калкулатор</div>
+            <div class="tab" data-tab="project">📁 Проект</div>
+            <div class="tab" data-tab="materials">🔧 Материали</div>
+            <div class="tab" data-tab="pricing">💰 Ценообразуване</div>
+            <div class="tab" data-tab="history">📜 История</div>
+        </div>
+
+        <!-- Съдържание на табовете -->
+        <div id="calculator" class="tab-content active">
+            <h2 class="section-title">Калкулатор за един шкаф</h2>
+            <p class="section-description">Въведете размерите и характеристиките на шкафа</p>
+
+            <!-- Cabinet Preview -->
+            <div class="cabinet-preview-card" id="cabinetPreviewCard">
+                <div class="cabinet-icon" id="cabinetIcon">📦</div>
+                <div class="cabinet-type-name" id="cabinetTypeName">Изберете тип шкаф</div>
+                <div class="cabinet-description" id="cabinetDescription">Изберете тип от менюто</div>
+            </div>
+
+            <!-- Форма за калкулатор -->
+            <form id="cabinetForm" class="form-section">
+                <!-- Формата ще се генерира динамично от JavaScript -->
+            </form>
+
+            <!-- Резултати и грешки -->
+            <div class="spinner" id="loadingSpinner"></div>
+            <div id="resultDisplay" class="result-display">
+                <h4>✅ Резултат от изчислението</h4>
+                <div id="resultContent"></div>
+            </div>
+            <div id="errorDisplay" class="error-display">
+                <h4>❌ Грешка</h4>
+                <div id="errorContent"></div>
+            </div>
+        </div>
+
+        <div id="project" class="tab-content">
+            <h2 class="section-title">Управление на проект</h2>
+            <p class="section-description">Добавяйте множество шкафове и изчислявайте цял проект</p>
+            <div class="form-section">
+                <h4>Шкафове в проекта: <span id="projectCabinetCount" style="color: #667eea;">0</span></h4>
+                <div id="projectCabinetList" style="margin-top: 15px;"></div>
+                <div style="margin-top: 20px;">
+                    <button class="btn" id="calculateProjectBtn">💰 Изчисли проект</button>
+                    <button class="btn btn-warning" id="exportProjectBtn">📊 Експорт</button>
+                    <button class="btn btn-danger" id="clearProjectBtn">🗑️ Изчисти</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="materials" class="tab-content">
+            <h2 class="section-title">Материали и фурнитура</h2>
+            <p class="section-description">Управление на наличните материали и цени</p>
+            <div class="form-section" id="materialsContainer">
+                <!-- Таблицата за материали ще се генерира динамично -->
+            </div>
+        </div>
+
+        <div id="pricing" class="tab-content">
+            <div id="pricingContainer">
+                <h2 class="section-title">Калкулация на цени</h2>
+                <!-- Секциите за ценообразуване ще се генерират динамично -->
+            </div>
+        </div>
+
+        <div id="history" class="tab-content">
+            <h2 class="section-title">История</h2>
+            <div class="form-section">
+                <div id="historyList"></div>
+                <button class="btn btn-danger" id="clearHistoryBtn">🗑️ Изчисти история</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Зареждане на JavaScript модули -->
+    <script type="module" src="js/app.js"></script>
+    <script src="/js/xlsx.full.min.js"></script>
+</body>
+</html>
