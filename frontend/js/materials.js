@@ -4,9 +4,11 @@ import { State } from './state.js';
 // Модул за управление на материали
 export const Materials = {
     currentCategory: null,
+    quantities: {}, // Съхранява количествата: { itemId: quantity }
     
     // Инициализация
     init() {
+        this.loadQuantitiesFromLocalStorage();
         this.renderMaterialsTab();
         this.bindEvents();
     },
@@ -33,10 +35,19 @@ export const Materials = {
             
             ${this.renderAllCategories()}
             
+            <!-- Обща сума -->
+            <div class="form-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-top: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">💰 Обща стойност на материали</h3>
+                    <h2 id="materialsTotalValue" style="margin: 0; font-size: 2em;">0.00 лв</h2>
+                </div>
+            </div>
+            
             <input type="file" id="materialImportFile" accept=".json" style="display: none;">
         `;
         
         this.bindCollapsibleEvents();
+        this.calculateTotal();
     },
     
     // Рендериране на всички категории
@@ -65,8 +76,10 @@ export const Materials = {
                                 ${category.items[0]?.size ? '<th>Размер</th>' : ''}
                                 ${category.items[0]?.thickness ? '<th>Дебелина</th>' : ''}
                                 <th>Марка</th>
-                                <th>Цена</th>
+                                <th>Количество</th>
+                                <th>Цена/ед.</th>
                                 <th>Ед.</th>
+                                <th>Обща цена</th>
                                 <th style="width: 50px;">🗑️</th>
                             </tr>
                         </thead>
@@ -89,6 +102,9 @@ export const Materials = {
         let html = '';
         
         category.items.forEach((item, index) => {
+            const quantity = this.quantities[item.id] || 0;
+            const totalPrice = quantity * item.price;
+            
             html += `
                 <tr data-item-id="${item.id}">
                     <td>
@@ -126,6 +142,16 @@ export const Materials = {
                     </td>
                     <td>
                         <input type="number" 
+                               class="material-quantity" 
+                               value="${quantity}" 
+                               min="0" 
+                               step="1" 
+                               data-category="${categoryKey}" 
+                               data-id="${item.id}"
+                               style="background: #fff3cd; font-weight: bold;">
+                    </td>
+                    <td>
+                        <input type="number" 
                                class="material-price" 
                                value="${item.price.toFixed(2)}" 
                                min="0" 
@@ -135,6 +161,9 @@ export const Materials = {
                     </td>
                     <td style="text-align: center; color: #666;">
                         ${item.unit}
+                    </td>
+                    <td class="row-total" style="font-weight: bold; color: #28a745;">
+                        ${totalPrice.toFixed(2)} лв
                     </td>
                     <td>
                         <button class="delete-row-btn" 
@@ -213,6 +242,10 @@ export const Materials = {
         const success = removeMaterialFromCategory(categoryKey, itemId);
         
         if (success) {
+            // Изтриваме и количеството
+            delete this.quantities[itemId];
+            this.saveQuantitiesToLocalStorage();
+            
             this.renderMaterialsTab();
             
             // Отваряме секцията
@@ -236,6 +269,11 @@ export const Materials = {
                 e.target.classList.contains('material-price')) {
                 
                 this.handleFieldChange(e.target);
+            }
+            
+            // Специална обработка за количество
+            if (e.target.classList.contains('material-quantity')) {
+                this.handleQuantityChange(e.target);
             }
         });
     },
@@ -265,6 +303,65 @@ export const Materials = {
         
         // Запазваме в localStorage
         this.saveToLocalStorage();
+        
+        // Преизчисляваме общата цена при промяна на цена
+        if (input.classList.contains('material-price')) {
+            this.updateRowTotal(input);
+            this.calculateTotal();
+        }
+    },
+    
+    // Обработка на промяна в количество
+    handleQuantityChange(input) {
+        const itemId = parseInt(input.dataset.id);
+        if (!itemId) return;
+        
+        const quantity = parseFloat(input.value) || 0;
+        this.quantities[itemId] = quantity;
+        
+        // Обновяване на реда
+        this.updateRowTotal(input);
+        
+        // Запазване
+        this.saveQuantitiesToLocalStorage();
+        
+        // Преизчисляване на общата сума
+        this.calculateTotal();
+    },
+    
+    // Обновяване на цената на ред
+    updateRowTotal(input) {
+        const row = input.closest('tr');
+        if (!row) return;
+        
+        const itemId = parseInt(input.dataset.id);
+        const priceInput = row.querySelector('.material-price');
+        const totalCell = row.querySelector('.row-total');
+        
+        if (!priceInput || !totalCell) return;
+        
+        const quantity = this.quantities[itemId] || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const total = quantity * price;
+        
+        totalCell.textContent = total.toFixed(2) + ' лв';
+    },
+    
+    // Изчисляване на общата сума
+    calculateTotal() {
+        let grandTotal = 0;
+        
+        Object.entries(materialCategories).forEach(([categoryKey, category]) => {
+            category.items.forEach(item => {
+                const quantity = this.quantities[item.id] || 0;
+                grandTotal += quantity * item.price;
+            });
+        });
+        
+        const totalElement = document.getElementById('materialsTotalValue');
+        if (totalElement) {
+            totalElement.textContent = grandTotal.toFixed(2) + ' лв';
+        }
     },
     
     // Връзване на collapsible събития
@@ -292,6 +389,15 @@ export const Materials = {
         }
     },
     
+    // Запазване на количествата
+    saveQuantitiesToLocalStorage() {
+        try {
+            localStorage.setItem('materialQuantities', JSON.stringify(this.quantities));
+        } catch (error) {
+            console.error('Error saving quantities:', error);
+        }
+    },
+    
     // Зареждане от localStorage
     loadFromLocalStorage() {
         try {
@@ -306,10 +412,28 @@ export const Materials = {
         return false;
     },
     
+    // Зареждане на количествата
+    loadQuantitiesFromLocalStorage() {
+        try {
+            const data = localStorage.getItem('materialQuantities');
+            if (data) {
+                this.quantities = JSON.parse(data);
+            }
+        } catch (error) {
+            console.error('Error loading quantities:', error);
+            this.quantities = {};
+        }
+    },
+    
     // Експорт към файл
     exportToFile() {
-        const data = exportMaterials();
-        const blob = new Blob([data], { type: 'application/json' });
+        const data = {
+            materials: JSON.parse(exportMaterials()),
+            quantities: this.quantities
+        };
+        
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -319,7 +443,7 @@ export const Materials = {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        alert('✅ Материалите са експортирани успешно!');
+        alert('✅ Материалите и количествата са експортирани успешно!');
     },
     
     // Импорт от файл
@@ -333,13 +457,26 @@ export const Materials = {
             
             const reader = new FileReader();
             reader.onload = (event) => {
-                const success = importMaterials(event.target.result);
-                if (success) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    
+                    // Импорт на материали
+                    if (data.materials) {
+                        importMaterials(JSON.stringify(data.materials));
+                    }
+                    
+                    // Импорт на количества
+                    if (data.quantities) {
+                        this.quantities = data.quantities;
+                        this.saveQuantitiesToLocalStorage();
+                    }
+                    
                     this.renderMaterialsTab();
                     this.saveToLocalStorage();
-                    alert('✅ Материалите са импортирани успешно!');
-                } else {
+                    alert('✅ Материалите и количествата са импортирани успешно!');
+                } catch (error) {
                     alert('❌ Грешка при импортиране на материали!');
+                    console.error(error);
                 }
             };
             reader.readAsText(file);
@@ -350,12 +487,34 @@ export const Materials = {
     
     // Възстановяване на defaults
     resetToDefaults() {
-        if (!confirm('Сигурни ли сте, че искате да възстановите материалите по подразбиране?\n\nВсички промени ще бъдат изгубени!')) {
+        if (!confirm('Сигурни ли сте, че искате да възстановите материалите по подразбиране?\n\nВсички промени и количества ще бъдат изгубени!')) {
             return;
         }
         
         localStorage.removeItem('customMaterials');
+        localStorage.removeItem('materialQuantities');
         location.reload();
+    },
+    
+    // Получаване на материали с количества за други модули
+    getMaterialsWithQuantities() {
+        const result = [];
+        
+        Object.entries(materialCategories).forEach(([categoryKey, category]) => {
+            category.items.forEach(item => {
+                const quantity = this.quantities[item.id] || 0;
+                if (quantity > 0) {
+                    result.push({
+                        ...item,
+                        quantity,
+                        total: quantity * item.price,
+                        category: category.name
+                    });
+                }
+            });
+        });
+        
+        return result;
     }
 };
 
