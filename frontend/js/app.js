@@ -4,6 +4,8 @@ import { UI } from './ui.js';
 import { Tables } from './tables.js';
 import { Calculator } from './calculator.js';
 import { Api } from './api.js';
+import { Materials } from './materials.js';
+
 
 // Основен клас на приложението
 class FurnitureCalculator {
@@ -18,6 +20,7 @@ class FurnitureCalculator {
         // Инициализация на модули
         UI.init();
         Tables.init();
+        Materials.init();
 
         // Връзване на глобални събития
         this.bindGlobalEvents();
@@ -43,11 +46,25 @@ class FurnitureCalculator {
 
     // Връзване на глобални събития
     bindGlobalEvents() {
-        // Запазване на данни при затваряне
-        window.addEventListener('beforeunload', () => {
-            this.saveAppState();
+         document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+
+            // Скриване на всички табове
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            // Показване на избрания таб
+            tab.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            // Специална логика за Materials таб
+            if (tabName === 'materials') {  // ← ДОБАВИ
+                Materials.renderMaterialsTab();
+            }
         });
-    }
+    });
+}
 
     // Първоначална настройка
     initialSetup() {
