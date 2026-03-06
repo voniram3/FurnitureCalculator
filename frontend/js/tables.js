@@ -538,41 +538,49 @@ export const Tables = {
         let totalBodyEdge = 0;
         let totalDoorEdge = 0;
 
-        project.forEach(cabinet => {
-            // Генериране на елементите за този шкаф
-            const elements = Calculator.generateCabinetElements ? 
-                            Calculator.generateCabinetElements(cabinet) : [];
-            
-            elements.forEach(element => {
-                totalComponents += element.quantity || 0;
-                
-                // Броене на специфични елементи
-                if (element.name === 'Чекмеджета') {
-                    totalDrawers += element.quantity || 0;
+       project.forEach(cabinet => {
+    // Умножаваме по бройката на шкафа (ако има поле quantity)
+    const cabinetQty = cabinet.quantity || 1;
+
+    // Генериране на елементите за този шкаф
+    const elements = Calculator.generateCabinetElements ?
+                    Calculator.generateCabinetElements(cabinet) : [];
+
+    elements.forEach(element => {
+        const qty = (element.quantity || 0) * cabinetQty;
+
+        // 🔧 ПОПРАВКА: Броим САМО компоненти за рязане (БЕЗ хардуер)
+        if (element.category === 'component' || element.category === 'door' || element.category === 'back') {
+            totalComponents += qty;
+        }
+
+        // Броене на специфични елементи
+        if (element.name === 'Чекмеджета') {
+            totalDrawers += qty;
+        }
+        if (element.name === 'Панти') {
+            totalHinges += qty;
+        }
+        if (element.name === 'Рафтове' || element.name === 'Рафт') {
+            totalShelves += qty;
+        }
+
+        // Изчисляване на кантове
+        if (element.size && element.category) {
+            const [w, h] = element.size.replace(' мм', '').split('x').map(Number);
+            if (w && h) {
+                const perimeter = (w + h) * 2 / 1000; // в метри
+                const totalLength = perimeter * qty;
+
+                if (element.category === 'door') {
+                    totalDoorEdge += totalLength;
+                } else if (element.category === 'component' || element.category === 'back') {
+                    totalBodyEdge += totalLength;
                 }
-                if (element.name === 'Панти') {
-                    totalHinges += element.quantity || 0;
-                }
-                if (element.name === 'Рафтове' || element.name === 'Рафт') {
-                    totalShelves += element.quantity || 0;
-                }
-                
-                // Изчисляване на кантове
-                if (element.size && element.category) {
-                    const [w, h] = element.size.replace(' мм', '').split('x').map(Number);
-                    if (w && h) {
-                        const perimeter = (w + h) * 2 / 1000; // в метри
-                        const totalLength = perimeter * (element.quantity || 0);
-                        
-                        if (element.category === 'door') {
-                            totalDoorEdge += totalLength;
-                        } else if (element.category === 'component') {
-                            totalBodyEdge += totalLength;
-                        }
-                    }
-                }
-            });
-        });
+            }
+        }
+    });
+});
 
         totalEdgeLength = totalBodyEdge + totalDoorEdge;
 

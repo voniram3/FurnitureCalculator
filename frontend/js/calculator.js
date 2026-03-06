@@ -182,12 +182,15 @@ export const Calculator = {
         const typeNames = {
             'base': 'Долен шкаф',
             'upper': 'Горен шкаф',
+            'upperLift': 'Горен шкаф с механизъм',
             'drawer': 'Долен шкаф чекмедже',
             'oven': 'Долен шкаф фурна',
             'sink': 'Долен шкаф мивка',
             'blind': 'Долен глух шкаф',
             'fridge': 'Колона хладилник',
-            'column': 'Колона'
+            'column': 'Колона',
+            'panel': 'Панел',
+            'plinth': 'Цокъл'
         };
         
         const typeName = typeNames[cabinet.type] || cabinet.type;
@@ -201,61 +204,84 @@ export const Calculator = {
         const h = cabinet.height;
         const d = cabinet.depth;
         const type = cabinet.type;
-        
+
+        // 🔧 КРИТИЧНА ПОПРАВКА: Проверка за panel/plinth НА ПЪРВО МЯСТО!
+        // ═══════════════════════════════════════════════════════════
+
+        if (type === 'panel') {
+            return [{
+                name: 'Панел',
+                quantity: 1,
+                size: `${w}x${h} мм`,
+                category: 'component'
+            }];
+        }
+
+        if (type === 'plinth') {
+            return [{
+                name: 'Цокъл',
+                quantity: 1,
+                size: `${w}x${h} мм`,
+                category: 'component'
+            }];
+        }
+
+        // ═══════════════════════════════════════════════════════════
         // 📐 ПРОВЕРКА ЗА МЕТОД НА КОНСТРУКЦИЯ
+        // ═══════════════════════════════════════════════════════════
         const pagesBetweenPanels = cabinet.pages_between_panels === true;
-        
+
         if (pagesBetweenPanels) {
             // ═══════════════════════════════════════════════════════════
             // МЕТОД 2: СТРАНИЦИ МЕЖДУ ДЪНО/КАПАК (БЕЗ СТАБИЛИЗАТОРИ)
             // ═══════════════════════════════════════════════════════════
-            
+
             // Страници (ПО-НИСКИ - h минус две дебелини)
             elements.push({
                 name: 'Страници',
                 quantity: 2,
-                size: `${h - 36}x${d} мм`,  // ← h - 36 вместо h
+                size: `${h - 36}x${d} мм`,
                 category: 'component'
             });
-            
-            // Дъно (ПЪЛНА ШИРИНА)
-            if (type !== 'upper' && type !== 'fridge') {
+
+            // Дъно (ПЪЛНА ШИРИНА) - за всички освен drawer
+            if (type !== 'drawer') {
                 elements.push({
                     name: 'Дъно',
                     quantity: 1,
-                    size: `${w}x${d} мм`,  // ← w вместо (w - 36)
+                    size: `${w}x${d} мм`,
                     category: 'component'
                 });
             }
-            
-            // Капак (ПЪЛНА ШИРИНА)
-            if (type === 'base' || type === 'sink' || type === 'blind' || type === 'column' || type === 'fridge') {
+
+            // Капак (ПЪЛНА ШИРИНА) - САМО за горни
+            if (type === 'upper' || type === 'upperLift' || type === 'fridge' || type === 'column') {
                 elements.push({
                     name: 'Капак',
                     quantity: 1,
-                    size: `${w}x${d} мм`,  // ← w вместо (w - 36)
+                    size: `${w}x${d} мм`,
                     category: 'component'
                 });
             }
-            
-            // ❌ НЯМА СТАБИЛИЗАТОРИ в Метод 2!
-            
+
             // Дъна за drawer шкафове (ПЪЛНА ШИРИНА)
             if (type === 'drawer') {
                 const drawerCount = cabinet.drawer_count || 3;
                 elements.push({
                     name: 'Дъна',
                     quantity: drawerCount + 1,
-                    size: `${w}x${d} мм`,  // ← w вместо (w - 36)
+                    size: `${w}x${d} мм`,
                     category: 'component'
                 });
             }
-            
+
+            // ❌ НЯМА СТАБИЛИЗАТОРИ в Метод 2!
+
         } else {
             // ═══════════════════════════════════════════════════════════
-            // МЕТОД 1: ДЪНО/КАПАК МЕЖДУ СТРАНИЦИ (СТАНДАРТЕН)
+            // МЕТОД 1: ДЪНО/КАПАК MELLAN СТРАНИЦИ (СТАНДАРТЕН)
             // ═══════════════════════════════════════════════════════════
-            
+
             // Страници (НОРМАЛНА ВИСОЧИНА)
             elements.push({
                 name: 'Страници',
@@ -263,28 +289,28 @@ export const Calculator = {
                 size: `${h}x${d} мм`,
                 category: 'component'
             });
-            
-            // Дъно и капак (ПО-ТЕСНИ - между страниците)
-            if (type !== 'drawer' && type !== 'upper' && type !== 'fridge') {
+
+            // Дъно (между страниците) - за всички освен drawer
+            if (type !== 'drawer') {
                 const bottomWidth = w - 36;
-                
                 elements.push({
                     name: 'Дъно',
                     quantity: 1,
                     size: `${bottomWidth}x${d} мм`,
                     category: 'component'
                 });
-                
-                if (type === 'base' || type === 'sink' || type === 'blind') {
-                    elements.push({
-                        name: 'Капак',
-                        quantity: 1,
-                        size: `${bottomWidth}x${d} мм`,
-                        category: 'component'
-                    });
-                }
             }
-            
+
+            // Капак (между страниците) - САМО за горни
+            if (type === 'upper' || type === 'upperLift' || type === 'fridge' || type === 'column') {
+                elements.push({
+                    name: 'Капак',
+                    quantity: 1,
+                    size: `${w - 36}x${d} мм`,
+                    category: 'component'
+                });
+            }
+
             // Дъна за drawer шкафове
             if (type === 'drawer') {
                 const drawerCount = cabinet.drawer_count || 3;
@@ -295,14 +321,14 @@ export const Calculator = {
                     category: 'component'
                 });
             }
-            
-            // ✅ СТАБИЛИЗАТОРИ (само в Метод 1)
+
+            // ✅ СТАБИЛИЗАТОРИ (само в Метод 1 и само за долни)
             if (type === 'base' || type === 'sink' || type === 'oven' || type === 'drawer' || type === 'blind') {
                 let stabCount = 2;
                 if (type === 'sink' || w >= 800) {
                     stabCount = 3;
                 }
-                
+
                 elements.push({
                     name: 'Стабилизатори',
                     quantity: stabCount,
@@ -311,16 +337,16 @@ export const Calculator = {
                 });
             }
         }
-        
+
         // ═══════════════════════════════════════════════════════════
-        // ОБЩИ ЕЛЕМЕНТИ (и за двата метода)
+        // ОБЩИ ЕЛЕМЕНТИ (за всички типове шкафове)
         // ═══════════════════════════════════════════════════════════
-        
+
         // Рафтове
         if (cabinet.shelf_count > 0) {
             const shelfWidth = w - 50;
             const shelfDepth = d - 30;
-            
+
             elements.push({
                 name: cabinet.shelf_count === 1 ? 'Рафт' : 'Рафтове',
                 quantity: cabinet.shelf_count,
@@ -328,14 +354,26 @@ export const Calculator = {
                 category: 'component'
             });
         }
-        
+
+        // Повдигащ механизъм - за upperLift тип
+        if (type === 'upperLift') {
+            const mechanism = cabinet.lift_mechanism || 'Aventos HS';
+
+            elements.push({
+                name: `Повдигащ механизъм (${mechanism})`,
+                quantity: 1,
+                size: null,
+                category: 'hardware'
+            });
+        }
+
         // Врати / Вратички
         if (cabinet.door_count > 0) {
             const doorHeight = this.calculateDoorHeight(cabinet);
             const doorWidth = this.calculateDoorWidth(cabinet);
-            
+
             const doorName = (cabinet.door_count === 1 || type === 'oven') ? 'Вратичка' : 'Вратички';
-            
+
             elements.push({
                 name: doorName,
                 quantity: cabinet.door_count,
@@ -343,12 +381,12 @@ export const Calculator = {
                 category: 'door'
             });
         }
-        
+
         // Чекмеджета
         if (cabinet.drawer_count > 0) {
             const drawerHeight = Math.floor((h - 100) / cabinet.drawer_count) - 20;
             const drawerWidth = w - 6;
-            
+
             elements.push({
                 name: 'Чекмеджета',
                 quantity: cabinet.drawer_count,
@@ -356,12 +394,12 @@ export const Calculator = {
                 category: 'component'
             });
         }
-        
+
         // Гръб
         if (cabinet.has_back !== false) {
             const backWidth = w - 40;
             const backHeight = h - 4;
-            
+
             elements.push({
                 name: 'Гръб',
                 quantity: 1,
@@ -369,7 +407,7 @@ export const Calculator = {
                 category: 'back'
             });
         }
-        
+
         // Крака (само за долни шкафове)
         if (type === 'base' || type === 'sink' || type === 'oven' || type === 'blind' || type === 'drawer') {
             const legCount = w >= 800 ? 6 : 4;
@@ -380,9 +418,9 @@ export const Calculator = {
                 category: 'hardware'
             });
         }
-        
-        // Панти
-        if (cabinet.door_count > 0) {
+
+        // Панти - САМО ако има врати И НЕ е upperLift
+        if (cabinet.door_count > 0 && type !== 'upperLift') {
             elements.push({
                 name: 'Панти',
                 quantity: cabinet.door_count * 2,
@@ -390,7 +428,7 @@ export const Calculator = {
                 category: 'hardware'
             });
         }
-        
+
         // Рафтодържачи
         if (cabinet.shelf_count > 0) {
             elements.push({
@@ -400,7 +438,7 @@ export const Calculator = {
                 category: 'hardware'
             });
         }
-        
+
         // Водачи за чекмеджета
         if (cabinet.drawer_count > 0) {
             elements.push({
@@ -410,9 +448,9 @@ export const Calculator = {
                 category: 'hardware'
             });
         }
-        
+
         return elements;
-    },
+    }
 
     // Изчисляване на височина на врата
     calculateDoorHeight(cabinet) {
