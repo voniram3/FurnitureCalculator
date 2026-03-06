@@ -450,7 +450,7 @@ export const Calculator = {
         }
 
         return elements;
-    }
+    },
 
     // Изчисляване на височина на врата
     calculateDoorHeight(cabinet) {
