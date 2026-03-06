@@ -454,23 +454,23 @@ export const Calculator = {
 
     // Изчисляване на височина на врата
     calculateDoorHeight(cabinet) {
-        const type = cabinet.type;
-        const h = cabinet.height;
-        
-        if (cabinet.custom_door_size && cabinet.door_height) {
-            return cabinet.door_height;
-        }
-        
-        if (type === 'base' || type === 'sink' || type === 'blind' || type === 'drawer') {
-            return h - 103; // 100mm цокъл + 3mm процеп
-        } else if (type === 'upper' || type === 'fridge' || type === 'column') {
-            return h - 3;
-        } else if (type === 'oven') {
-            return 145; // Малка вратичка
-        }
-        
-        return h - 3;
-    },
+    const type = cabinet.type;
+    const h = cabinet.height;
+
+    // Ако има персонализирани размери
+    if (cabinet.custom_door_size && cabinet.door_height) {
+        return cabinet.door_height;
+    }
+
+    // ФУРНА: малка вратичка (независимо от височината на шкафа)
+    if (type === 'oven') {
+        return 145;
+    }
+
+    // ВСИЧКИ ОСТАНАЛИ: височина - 3мм процеп
+    // (Долни, Горни, Горен с механизъм, Колони, и т.н.)
+    return h - 3;
+},
 
     // Изчисляване на ширина на врата
     calculateDoorWidth(cabinet) {
