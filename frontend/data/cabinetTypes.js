@@ -22,7 +22,7 @@ export const cabinetTypes = {
         icon: '🔥', name: 'Шкаф за фурна',
         description: 'Специализиран шкаф за вградена фурна',
         defaultWidth: 600, defaultHeight: 760, defaultDepth: 560,
-        defaultShelves: 0, defaultDoors: 1, defaultDrawers: 1
+        defaultShelves: 0, defaultDoors: 0, defaultDrawers: 1
     },
     'sink': {
         icon: '🚰', name: 'Шкаф за мивка',
@@ -47,6 +47,42 @@ export const cabinetTypes = {
         description: 'Висока колона за съхранение',
         defaultWidth: 600, defaultHeight: 2100, defaultDepth: 560,
         defaultShelves: 3, defaultDoors: 2, defaultDrawers: 0
+    }
+     upperLift: {
+        name: 'Горен шкаф с механизъм',
+        icon: '⬆️',
+        description: 'Горен шкаф с повдигащ механизъм вместо панти',
+        defaultWidth: 800,
+        defaultHeight: 720,
+        defaultDepth: 320,
+        defaultShelves: 1,
+        defaultDoors: 2,
+        defaultDrawers: 0,
+        liftMechanism: 'Aventos HS'
+    },
+
+    panel: {
+        name: 'Допълнителна плоскост',
+        icon: '📋',
+        description: 'Допълнителна плоскост с произволни размери',
+        defaultWidth: 880,
+        defaultHeight: 580,
+        defaultDepth: 18,
+        defaultShelves: 0,
+        defaultDoors: 0,
+        defaultDrawers: 0
+    },
+
+    plinth: {
+        name: 'Цокъл',
+        icon: '📏',
+        description: 'Цокъл за долни шкафове',
+        defaultWidth: 4000,
+        defaultHeight: 100,
+        defaultDepth: 18,
+        defaultShelves: 0,
+        defaultDoors: 0,
+        defaultDrawers: 0
     }
 };
 
