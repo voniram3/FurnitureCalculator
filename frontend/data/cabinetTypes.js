@@ -47,8 +47,8 @@ export const cabinetTypes = {
         description: 'Висока колона за съхранение',
         defaultWidth: 600, defaultHeight: 2100, defaultDepth: 560,
         defaultShelves: 3, defaultDoors: 2, defaultDrawers: 0
-    }
-     upperLift: {
+    },
+     'upperLift': {
         name: 'Горен шкаф с механизъм',
         icon: '⬆️',
         description: 'Горен шкаф с повдигащ механизъм вместо панти',
@@ -61,7 +61,7 @@ export const cabinetTypes = {
         liftMechanism: 'Aventos HS'
     },
 
-    panel: {
+    'panel': {
         name: 'Допълнителна плоскост',
         icon: '📋',
         description: 'Допълнителна плоскост с произволни размери',
@@ -73,7 +73,7 @@ export const cabinetTypes = {
         defaultDrawers: 0
     },
 
-    plinth: {
+    'plinth': {
         name: 'Цокъл',
         icon: '📏',
         description: 'Цокъл за долни шкафове',
