@@ -2,12 +2,11 @@ import {
     materialCategories, 
     loadAllMaterials, 
     getMaterialById,
-    searchMaterials,
-    saveCustomMaterial
+    searchMaterials
 } from '../data/materialCategories.js';
 import { State } from './state.js';
 
-// Модул за управление на материали - ФИНАЛНА версия + Favorites + Custom Materials
+// Модул за управление на материали - ФИНАЛНА версия
 export const Materials = {
     selectedMaterials: {
         // Плочи - 4 подменюта
@@ -32,7 +31,6 @@ export const Materials = {
         drugi: null,
         kantove: null
     },
-    favorites: [],      // ⭐ Списък с favorite material IDs
     loaded: false,
     currentModal: null,
     currentCategory: null,
@@ -45,7 +43,6 @@ export const Materials = {
         this.loaded = true;
         console.log('✅ Materials loaded');
         this.loadSelections();
-        this.loadFavorites();
         this.renderMaterialsTab();
         this.bindEvents();
     },
@@ -285,16 +282,8 @@ export const Materials = {
             <div class="material-modal-content" onclick="event.stopPropagation()">
                 <div class="material-modal-header">
                     <h3 style="margin: 0; color: #667eea;">${category.name}</h3>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button onclick="Materials.showAddMaterialForm()" 
-                                style="background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
-                            ➕ Нов материал
-                        </button>
-                        <button onclick="Materials.closeMaterialSelector()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #999;">✕</button>
-                    </div>
+                    <button onclick="Materials.closeMaterialSelector()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #999;">✕</button>
                 </div>
-                
-                <div id="addMaterialFormContainer" style="display: none;"></div>
                 
                 <div style="padding: 15px; border-bottom: 1px solid #eee;">
                     <input type="text" 
@@ -305,7 +294,10 @@ export const Materials = {
                 
                 <div class="material-modal-body">
                     <div class="material-list" id="materialList">
-                        ${this.renderMaterialListWithFavorites(category, selectedId)}
+                        ${category.items.length === 0 ? 
+                            '<div style="padding: 40px; text-align: center; color: #999;">Няма налични материали</div>' :
+                            category.items.map(item => this.renderMaterialListItem(item, selectedId)).join('')
+                        }
                     </div>
                     
                     <div class="material-preview" id="materialPreview">
@@ -350,81 +342,28 @@ export const Materials = {
                     background: #e7f0ff; border-left: 4px solid #667eea;
                 }
                 .material-preview { padding: 20px; overflow-y: auto; }
-                .fav-btn {
-                    background: none; border: none; cursor: pointer; font-size: 1.2em;
-                    padding: 2px 6px; transition: transform 0.15s;
-                }
-                .fav-btn:hover { transform: scale(1.3); }
-                .fav-separator {
-                    padding: 8px 20px; background: #fff8e1; color: #f57f17;
-                    font-size: 0.85em; font-weight: 600; border-bottom: 1px solid #f0f0f0;
-                }
-                .add-material-form {
-                    padding: 20px; background: #f8f9fa; border-bottom: 2px solid #28a745;
-                }
-                .add-material-form .form-row {
-                    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;
-                }
-                .add-material-form input, .add-material-form select {
-                    width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.95em;
-                }
-                .add-material-form label {
-                    display: block; font-size: 0.85em; color: #555; margin-bottom: 3px; font-weight: 500;
-                }
             </style>
         `;
     },
     
-    // Рендериране на списък с favorites най-горе
-    renderMaterialListWithFavorites(category, selectedId) {
-        if (category.items.length === 0) {
-            return '<div style="padding: 40px; text-align: center; color: #999;">Няма налични материали</div>';
-        }
-        
-        const favItems = category.items.filter(item => this.favorites.includes(item.id));
-        const otherItems = category.items.filter(item => !this.favorites.includes(item.id));
-        
-        let html = '';
-        
-        if (favItems.length > 0) {
-            html += '<div class="fav-separator">⭐ Любими</div>';
-            html += favItems.map(item => this.renderMaterialListItem(item, selectedId)).join('');
-            html += '<div class="fav-separator" style="background: #f0f0f0; color: #999;">Всички</div>';
-        }
-        
-        html += otherItems.map(item => this.renderMaterialListItem(item, selectedId)).join('');
-        
-        return html;
-    },
-    
-    // Рендериране на material list item с ⭐
+    // Рендериране на material list item
     renderMaterialListItem(item, selectedId) {
         const isSelected = item.id === selectedId;
-        const isFav = this.favorites.includes(item.id);
         const price = (item.price !== null && item.price !== undefined) 
             ? item.price.toFixed(2) + ' лв' 
             : 'N/A';
         const displayName = item.code ? `${item.code} - ${item.name}` : item.name;
-        const isCustom = item.isCustom ? ' <span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:3px;font-size:0.75em;">custom</span>' : '';
         
         return `
             <div class="material-list-item ${isSelected ? 'selected' : ''}" 
                  data-material-id="${item.id}"
                  data-search-text="${(item.code || '').toLowerCase()} ${item.name.toLowerCase()}"
                  onclick="Materials.selectMaterial('${item.id}')">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 500; color: #333; margin-bottom: 3px;">${displayName}${isCustom}</div>
-                        <div style="font-size: 0.9em; color: #666;">
-                            ${price}/${item.unit}
-                            ${item.size ? ` • ${item.size}` : ''}
-                            ${item.brand ? ` • ${item.brand}` : ''}
-                        </div>
-                    </div>
-                    <button class="fav-btn" onclick="event.stopPropagation(); Materials.toggleFavorite('${item.id}')" 
-                            title="${isFav ? 'Премахни от любими' : 'Добави в любими'}">
-                        ${isFav ? '⭐' : '☆'}
-                    </button>
+                <div style="font-weight: 500; color: #333; margin-bottom: 3px;">${displayName}</div>
+                <div style="font-size: 0.9em; color: #666;">
+                    ${price}/${item.unit}
+                    ${item.size ? ` • ${item.size}` : ''}
+                    ${item.brand ? ` • ${item.brand}` : ''}
                 </div>
             </div>
         `;
@@ -665,204 +604,6 @@ export const Materials = {
     // Получаване на избрани материали
     getSelectedMaterials() {
         return this.selectedMaterials;
-    },
-    
-    // ==================== ⭐ FAVORITES ====================
-    
-    toggleFavorite(materialId) {
-        const index = this.favorites.indexOf(materialId);
-        if (index >= 0) {
-            this.favorites.splice(index, 1);
-        } else {
-            this.favorites.push(materialId);
-        }
-        this.saveFavorites();
-        this.refreshMaterialList();
-    },
-    
-    saveFavorites() {
-        try {
-            localStorage.setItem('material_favorites', JSON.stringify(this.favorites));
-        } catch (e) {
-            console.error('Error saving favorites:', e);
-        }
-    },
-    
-    loadFavorites() {
-        try {
-            const saved = localStorage.getItem('material_favorites');
-            if (saved) {
-                this.favorites = JSON.parse(saved);
-            }
-        } catch (e) {
-            console.error('Error loading favorites:', e);
-            this.favorites = [];
-        }
-    },
-    
-    // Обновява само списъка в modal-а без да затваря modal-а
-    refreshMaterialList() {
-        const listEl = document.getElementById('materialList');
-        if (!listEl || !this.currentCategory) return;
-        
-        const category = materialCategories[this.currentCategory];
-        if (!category) return;
-        
-        const fullKey = this.currentSubcategory 
-            ? `${this.currentCategory}_${this.currentSubcategory}` 
-            : this.currentCategory;
-        const selectedId = this.selectedMaterials[fullKey]?.material?.id;
-        
-        // Запазваме текущия selected item
-        const currentSelected = document.querySelector('.material-list-item.selected');
-        const currentSelectedId = currentSelected?.getAttribute('data-material-id');
-        
-        listEl.innerHTML = this.renderMaterialListWithFavorites(category, currentSelectedId || selectedId);
-        
-        // Прилагаме текущия search filter
-        const searchInput = document.getElementById('materialSearchInput');
-        if (searchInput && searchInput.value) {
-            this.filterMaterials(searchInput.value);
-        }
-    },
-    
-    // ==================== ➕ ADD CUSTOM MATERIAL ====================
-    
-    showAddMaterialForm() {
-        const container = document.getElementById('addMaterialFormContainer');
-        if (!container) return;
-        
-        const category = materialCategories[this.currentCategory];
-        const unit = category?.unit || 'бр';
-        
-        container.style.display = 'block';
-        container.innerHTML = `
-            <div class="add-material-form">
-                <h4 style="margin: 0 0 15px 0; color: #28a745;">➕ Добави нов материал</h4>
-                
-                <div class="form-row">
-                    <div>
-                        <label>Име *</label>
-                        <input type="text" id="newMatName" placeholder="напр. ПДЧ Бял гланц">
-                    </div>
-                    <div>
-                        <label>Код / Артикул</label>
-                        <input type="text" id="newMatCode" placeholder="напр. K101">
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div>
-                        <label>Цена (лв.) *</label>
-                        <input type="number" id="newMatPrice" step="0.01" min="0" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label>Единица</label>
-                        <select id="newMatUnit">
-                            <option value="лист" ${unit === 'лист' ? 'selected' : ''}>лист</option>
-                            <option value="бр" ${unit === 'бр' ? 'selected' : ''}>бр</option>
-                            <option value="комплект" ${unit === 'комплект' ? 'selected' : ''}>комплект</option>
-                            <option value="метър" ${unit === 'метър' ? 'selected' : ''}>метър</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div>
-                        <label>Размер</label>
-                        <input type="text" id="newMatSize" placeholder="напр. 2800×2070">
-                    </div>
-                    <div>
-                        <label>Доставчик</label>
-                        <input type="text" id="newMatSupplier" placeholder="напр. Ламина">
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div>
-                        <label>Дебелина</label>
-                        <input type="text" id="newMatThickness" placeholder="напр. 18мм">
-                    </div>
-                    <div>
-                        <label>Марка</label>
-                        <input type="text" id="newMatBrand" placeholder="напр. EGGER">
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button onclick="Materials.saveNewMaterial()" 
-                            style="flex: 1; background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600;">
-                        ✓ Запази
-                    </button>
-                    <button onclick="Materials.hideAddMaterialForm()" 
-                            style="flex: 1; background: #f0f0f0; color: #666; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 1em;">
-                        Отказ
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Focus на първото поле
-        setTimeout(() => document.getElementById('newMatName')?.focus(), 100);
-    },
-    
-    hideAddMaterialForm() {
-        const container = document.getElementById('addMaterialFormContainer');
-        if (container) {
-            container.style.display = 'none';
-            container.innerHTML = '';
-        }
-    },
-    
-    saveNewMaterial() {
-        const name = document.getElementById('newMatName')?.value?.trim();
-        const price = parseFloat(document.getElementById('newMatPrice')?.value);
-        
-        if (!name) {
-            alert('Моля въведете име на материала!');
-            document.getElementById('newMatName')?.focus();
-            return;
-        }
-        if (isNaN(price) || price < 0) {
-            alert('Моля въведете валидна цена!');
-            document.getElementById('newMatPrice')?.focus();
-            return;
-        }
-        
-        const code = document.getElementById('newMatCode')?.value?.trim() || '';
-        const unit = document.getElementById('newMatUnit')?.value || 'бр';
-        const size = document.getElementById('newMatSize')?.value?.trim() || null;
-        const supplier = document.getElementById('newMatSupplier')?.value?.trim() || null;
-        const thickness = document.getElementById('newMatThickness')?.value?.trim() || null;
-        const brand = document.getElementById('newMatBrand')?.value?.trim() || null;
-        
-        const material = {
-            id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-            name,
-            code,
-            price,
-            unit,
-            size,
-            thickness,
-            brand,
-            supplier: supplier || 'custom',
-            image: null,
-            inStock: true,
-            isCustom: true,
-            url: null
-        };
-        
-        // Запазваме в localStorage и в текущата категория
-        saveCustomMaterial(this.currentCategory, material);
-        
-        // Скриваме формата и обновяваме списъка
-        this.hideAddMaterialForm();
-        this.refreshMaterialList();
-        
-        // Автоматично го селектираме
-        this.selectMaterial(material.id);
-        
-        console.log(`✅ Custom material added: ${name} (${this.currentCategory})`);
     }
 };
 

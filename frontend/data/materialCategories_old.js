@@ -252,35 +252,8 @@ export async function loadAllMaterials() {
     
     await Promise.all(promises);
     
-    // Зареждаме и custom материалите от localStorage
-    loadCustomMaterials();
-    
     console.log('✅ All materials loaded');
     return materialCategories;
-}
-
-/**
- * Зареждане на custom материали от localStorage
- */
-function loadCustomMaterials() {
-    try {
-        const custom = JSON.parse(localStorage.getItem('customMaterials') || '{}');
-        
-        for (const [categoryKey, items] of Object.entries(custom)) {
-            if (materialCategories[categoryKey] && Array.isArray(items)) {
-                items.forEach(item => {
-                    // Маркираме като custom и проверяваме за дубликати
-                    item.isCustom = true;
-                    const exists = materialCategories[categoryKey].items.some(m => m.id === item.id);
-                    if (!exists) {
-                        materialCategories[categoryKey].items.push(item);
-                    }
-                });
-            }
-        }
-    } catch (e) {
-        console.error('Error loading custom materials:', e);
-    }
 }
 
 /**

@@ -65,7 +65,7 @@ export const Calculator = {
             // API заявка за проект
             const result = await Api.calculateProject(project);
 
-            if (result.success) {
+            if (result.success && result.data) {
                 // Показване на резултата
                 this.showProjectResult(result.data);
 
@@ -76,11 +76,15 @@ export const Calculator = {
                     cabinetCount: project.length
                 });
             } else {
-                alert(`Грешка при изчисление на проект: ${result.error}`);
+                // 🆕 FALLBACK: Ако API не работи, показваме локално изчисление
+                console.warn('API връща грешка или няма данни, използваме локално изчисление');
+                this.showProjectResultLocal(project);
             }
         } catch (error) {
             console.error('Грешка при изчисление на проект:', error);
-            alert(`Грешка: ${error.message}`);
+            // 🆕 FALLBACK: При грешка показваме локално изчисление
+            console.warn('API грешка, използваме локално изчисление');
+            this.showProjectResultLocal(project);
         } finally {
             UI.showLoading(false);
         }
@@ -344,7 +348,7 @@ export const Calculator = {
 
         // Рафтове
         if (cabinet.shelf_count > 0) {
-            const shelfWidth = w - 50;
+            const shelfWidth = w - 37;
             const shelfDepth = d - 30;
 
             elements.push({
@@ -397,8 +401,8 @@ export const Calculator = {
 
         // Гръб
         if (cabinet.has_back !== false) {
-            const backWidth = w - 40;
-            const backHeight = h - 4;
+            const backWidth = w - 1;
+            const backHeight = h - 1;
 
             elements.push({
                 name: 'Гръб',
@@ -724,8 +728,50 @@ export const Calculator = {
         return summary;
     },
 
-    // Показване на резултат от проект
+   // 🆕 НОВО: Локално изчисление на проект (без API)
+    showProjectResultLocal(project) {
+        let totalComponents = 0;
+        let totalHardware = 0;
+
+        project.forEach(cabinet => {
+            const elements = this.generateCabinetElements(cabinet);
+            elements.forEach(el => {
+                if (el.category === 'component' || el.category === 'door' || el.category === 'back') {
+                    totalComponents += el.quantity || 0;
+                } else if (el.category === 'hardware') {
+                    totalHardware += el.quantity || 0;
+                }
+            });
+        });
+
+        let message = `✅ Проектът е прегледан!\n\n`;
+        message += `📦 Общ брой шкафове: ${project.length}\n`;
+        message += `🔧 Компоненти: ${totalComponents} бр\n`;
+        message += `⚙️ Хардуер: ${totalHardware} бр\n\n`;
+        message += `ℹ️ За детайлно изчисление на цени използвайте таб "Ценообразуване"`;
+
+        alert(message);
+
+        // Добавяне в историята (опростено)
+        State.addToHistory({
+            data: {
+                total_cabinets: project.length,
+                components: totalComponents,
+                hardware: totalHardware
+            },
+            type: 'project',
+            cabinetCount: project.length
+        });
+    },
+
+    // Показване на резултат от проект (с API данни)
     showProjectResult(data) {
+        // 🔧 ПОПРАВКА: Проверка дали data съществува
+        if (!data) {
+            console.error('showProjectResult извикана без данни');
+            return;
+        }
+
         let message = `✅ Проектът е изчислен успешно!\n\n`;
         message += `Общ брой шкафове: ${data.total_cabinets || State.currentProject.length}\n`;
         message += `Обща цена: ${data.project_total_cost ? data.project_total_cost.toFixed(2) : '0.00'} лв\n`;
