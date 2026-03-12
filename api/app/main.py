@@ -48,6 +48,14 @@ try:
 except ImportError as e:
     print(f"⚠️  Warning: Could not import routers: {e}")
 
+# CutList router
+try:
+    from app.api.endpoints import cutlist as cutlist_endpoints
+    app.include_router(cutlist_endpoints.router, prefix="/api/v1", tags=["cutlist"])
+    print("✅ CutList router loaded")
+except ImportError as e:
+    print(f"⚠️  Warning: Could not import cutlist router: {e}")
+
 # Static files for frontend
 # Static files for frontend
 try:
