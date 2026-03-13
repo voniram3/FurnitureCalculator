@@ -241,13 +241,15 @@
         </div>
     </div>
 
-    <!-- Модулен JavaScript – използваме новите engine/visualizer -->
+    <!-- Модулен JavaScript – свързан с Python API backend -->
     <script type="module">
-        import { CutListEngine } from './js/cutlist/engine.js';
-        import { CutListVisualizer } from './js/cutlist/visualizer.js';
+        import { CutListVisualizer } from './js/cutlist/visualizer-improved.js';
 
-        const engine = new CutListEngine();
+        // -------------------- State (локални списъци за UI) --------------------
+        const parts = [];
+        const sheets = [];
         let chartInstance = null;
+        let lastApiResponse = null;
         let visualizationOptions = {
             scale: 0.25,
             showLabels: true,
@@ -256,6 +258,10 @@
             showGrain: true,
             showGrainViolations: true
         };
+
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:8000'
+            : window.location.origin;
 
         // -------------------- DOM елементи --------------------
         const partForm = document.getElementById('partForm');
@@ -279,22 +285,35 @@
         const exportBtn = document.getElementById('exportBtn');
         const printBtn = document.getElementById('printBtn');
 
-        // -------------------- Зареждане на настройки от UI --------------------
-        function loadSettingsFromForm() {
-            engine.settings.allowRotation = document.getElementById('allowRotation').checked;
-            engine.settings.respectGrainDirection = document.getElementById('respectGrain').checked;
-            engine.settings.cuttingBladeWidth = parseFloat(document.getElementById('bladeWidth').value);
-            engine.settings.minWasteArea = parseFloat(document.getElementById('minWaste').value);
-            engine.settings.sortingMethod = document.getElementById('sortingMethod').value;
-            engine.settings.heuristic = document.getElementById('heuristic').value;
-            visualizationOptions.showGrain = document.getElementById('showGrainViz').checked;
-            visualizationOptions.showGrainViolations = document.getElementById('showGrainWarnings').checked;
+        // -------------------- Grain detection (за 'auto' опцията) --------------------
+        const grainPreferences = {
+            'ПДЧ': 'none', 'МДФ': 'none', 'ХДЛ': 'horizontal',
+            'Масив': 'horizontal', 'Фурнир': 'horizontal', 'Шперплат': 'none',
+            'Гръб': 'none'
+        };
+
+        function detectGrainDirection(material) {
+            for (const [key, grain] of Object.entries(grainPreferences)) {
+                if (material.includes(key)) return grain;
+            }
+            return 'none';
+        }
+
+        // -------------------- Настройки от UI --------------------
+        function getSettings() {
+            return {
+                saw_kerf_mm: parseFloat(document.getElementById('bladeWidth').value) || 4,
+                allow_rotation: document.getElementById('allowRotation').checked,
+                respect_grain: document.getElementById('respectGrain').checked,
+                min_waste_area_mm2: parseFloat(document.getElementById('minWaste').value) || 10000,
+                multi_pass: true,
+                grain_penalty_factor: 0.5
+            };
         }
 
         // -------------------- Добавяне на детайл --------------------
         partForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            loadSettingsFromForm();
             const name = document.getElementById('partName').value.trim();
             const width = parseInt(document.getElementById('partWidth').value);
             const height = parseInt(document.getElementById('partHeight').value);
@@ -307,17 +326,9 @@
             if (!name) { alert('Въведете име на детайла!'); return; }
             if (width < 10 || height < 10) { alert('Размерите трябва да са поне 10мм!'); return; }
 
-            let grainDirection = grainSelect;
-            if (grainSelect === 'auto') {
-                grainDirection = engine.detectGrainDirection(material, width, height);
-            }
+            const grain = grainSelect === 'auto' ? detectGrainDirection(material) : grainSelect;
 
-            engine.addPart(name, width, height, quantity, material, {
-                grainDirection,
-                priority,
-                allowRotation
-            });
-
+            parts.push({ name, width, height, quantity, material, grain, priority, allow_rotation: allowRotation });
             updatePartsList();
             document.getElementById('partName').value = '';
             document.getElementById('partName').focus();
@@ -335,52 +346,72 @@
 
             if (width < 100 || height < 100) { alert('Размерите на листа трябва да са поне 100мм!'); return; }
 
-            let grainDirection = grainSelect;
-            if (grainSelect === 'auto') {
-                grainDirection = engine.detectGrainDirection(material, width, height);
-            }
-
-            engine.addSheet(name, width, height, cost, material, { grainDirection });
+            const grain = grainSelect === 'auto' ? detectGrainDirection(material) : grainSelect;
+            sheets.push({ name, width, height, cost, material, grain });
             updateSheetsList();
         });
 
-        // -------------------- Изчисление --------------------
-        calculateBtn.addEventListener('click', function() {
-            loadSettingsFromForm();
-            if (engine.parts.length === 0) { alert('Добавете поне един детайл!'); return; }
-            if (engine.sheets.length === 0) { alert('Добавете поне един лист материал!'); return; }
+        // -------------------- ИЗЧИСЛЕНИЕ чрез Python API --------------------
+        calculateBtn.addEventListener('click', async function() {
+            if (parts.length === 0) { alert('Добавете поне един детайл!'); return; }
+            if (sheets.length === 0) { alert('Добавете поне един лист материал!'); return; }
 
             calculateBtn.innerHTML = '⏳ Оптимизиране...';
             calculateBtn.disabled = true;
 
-            setTimeout(() => {
-                try {
-                    const results = engine.calculateOptimization();
-                    const stats = engine.getStatistics();
-                    if (results && results.length > 0) {
-                        displayResults(results, stats);
-                        CutListVisualizer.generateReport(engine, 'detailedReport');
-                        vizControls.style.display = 'flex';
-                        detailedReport.style.display = 'block';
-                    } else {
-                        alert('Не можа да се намери подходящо разкрояване. Пробвайте с по-големи листове или разрешете завъртане.');
-                    }
-                } catch (error) {
-                    console.error(error);
-                    alert('Грешка при изчисление: ' + error.message);
-                } finally {
-                    calculateBtn.innerHTML = '🧮 Изчисли оптимално разкрояване';
-                    calculateBtn.disabled = false;
+            try {
+                const payload = {
+                    parts: parts.map(p => ({
+                        name: p.name,
+                        width: p.width,
+                        height: p.height,
+                        material: p.material,
+                        grain: p.grain || 'none',
+                        allow_rotation: p.allow_rotation !== false,
+                        priority: p.priority || 5,
+                        quantity: p.quantity || 1
+                    })),
+                    sheets: sheets.map(s => ({
+                        name: s.name,
+                        width: s.width,
+                        height: s.height,
+                        material: s.material,
+                        grain: s.grain || 'none',
+                        cost: s.cost || 0
+                    })),
+                    settings: getSettings()
+                };
+
+                const response = await fetch(`${API_BASE}/api/v1/cutlist/optimize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
                 }
-            }, 500);
+
+                const result = await response.json();
+                lastApiResponse = result;
+                displayResults(result);
+
+            } catch (error) {
+                console.error('Optimization error:', error);
+                alert('Грешка при оптимизация: ' + error.message);
+            } finally {
+                calculateBtn.innerHTML = '🧮 Изчисли оптимално разкрояване';
+                calculateBtn.disabled = false;
+            }
         });
 
         // -------------------- Изчистване --------------------
         clearBtn.addEventListener('click', function() {
             if (confirm('Сигурни ли сте, че искате да изчистите всички данни?')) {
-                engine.parts = [];
-                engine.sheets = [];
-                engine.results = [];
+                parts.length = 0;
+                sheets.length = 0;
+                lastApiResponse = null;
                 updatePartsList();
                 updateSheetsList();
                 noResultsMessage.style.display = 'block';
@@ -394,16 +425,18 @@
             }
         });
 
-        // -------------------- Тестови примери (обратно съвместими) --------------------
+        // -------------------- Тестови примери --------------------
         optimizationTestBtn.addEventListener('click', function() {
             if (confirm('Зареждане на тестови данни? Това ще изчисти текущите.')) {
-                engine.parts = [];
-                engine.sheets = [];
-                engine.addPart('Страница', 760, 560, 2, 'ПДЧ 18мм');
-                engine.addPart('Дъно', 744, 560, 1, 'ПДЧ 18мм');
-                engine.addPart('Рафт', 743, 530, 1, 'ПДЧ 18мм');
-                engine.addPart('Вратичка', 380, 560, 4, 'ПДЧ 18мм');
-                engine.addSheet('ПДЧ лист', 2070, 2800, 120, 'ПДЧ 18мм');
+                parts.length = 0;
+                sheets.length = 0;
+                parts.push(
+                    { name: 'Страница', width: 760, height: 560, quantity: 2, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Дъно', width: 744, height: 560, quantity: 1, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Рафт', width: 743, height: 530, quantity: 1, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Вратичка', width: 380, height: 560, quantity: 4, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true }
+                );
+                sheets.push({ name: 'ПДЧ лист', width: 2070, height: 2800, cost: 120, material: 'ПДЧ 18мм', grain: 'none' });
                 updatePartsList();
                 updateSheetsList();
                 alert('Тестови данни заредени. Натиснете "Изчисли".');
@@ -412,16 +445,20 @@
 
         realTestBtn.addEventListener('click', function() {
             if (confirm('Зареждане на реален пример (долен шкаф)?')) {
-                engine.parts = [];
-                engine.sheets = [];
-                engine.addPart('Страница', 760, 560, 2, 'ПДЧ 18мм');
-                engine.addPart('Дъно', 564, 560, 1, 'ПДЧ 18мм');
-                engine.addPart('Гръб', 740, 560, 1, 'ПДЧ 3мм');
-                engine.addPart('Вратичка', 597, 388, 2, 'ПДЧ 18мм');
-                engine.addPart('Рафт', 564, 530, 1, 'ПДЧ 18мм');
-                engine.addPart('Стабилизатор', 564, 100, 2, 'ПДЧ 18мм');
-                engine.addSheet('ПДЧ лист 18мм', 2070, 2800, 120, 'ПДЧ 18мм');
-                engine.addSheet('ПДЧ лист 3мм', 2070, 2800, 80, 'ПДЧ 3мм');
+                parts.length = 0;
+                sheets.length = 0;
+                parts.push(
+                    { name: 'Страница', width: 760, height: 560, quantity: 2, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Дъно', width: 564, height: 560, quantity: 1, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Гръб', width: 740, height: 560, quantity: 1, material: 'Гръб ПДЧ 3мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Вратичка', width: 597, height: 388, quantity: 2, material: 'ПДЧ 18мм', grain: 'horizontal', priority: 7, allow_rotation: false },
+                    { name: 'Рафт', width: 564, height: 530, quantity: 1, material: 'ПДЧ 18мм', grain: 'none', priority: 5, allow_rotation: true },
+                    { name: 'Стабилизатор', width: 564, height: 100, quantity: 2, material: 'ПДЧ 18мм', grain: 'none', priority: 3, allow_rotation: true }
+                );
+                sheets.push(
+                    { name: 'ПДЧ лист 18мм', width: 2070, height: 2800, cost: 120, material: 'ПДЧ 18мм', grain: 'none' },
+                    { name: 'ПДЧ лист 3мм', width: 2070, height: 2800, cost: 80, material: 'Гръб ПДЧ 3мм', grain: 'none' }
+                );
                 updatePartsList();
                 updateSheetsList();
                 alert('Реален пример зареден.');
@@ -430,16 +467,10 @@
 
         // -------------------- Визуални контроли --------------------
         zoomInBtn.addEventListener('click', function() {
-            if (visualizationOptions.scale < 1.0) {
-                visualizationOptions.scale += 0.1;
-                redrawVisualizations();
-            }
+            if (visualizationOptions.scale < 1.0) { visualizationOptions.scale += 0.1; redrawVisualizations(); }
         });
         zoomOutBtn.addEventListener('click', function() {
-            if (visualizationOptions.scale > 0.1) {
-                visualizationOptions.scale -= 0.1;
-                redrawVisualizations();
-            }
+            if (visualizationOptions.scale > 0.1) { visualizationOptions.scale -= 0.1; redrawVisualizations(); }
         });
         toggleLabelsBtn.addEventListener('click', function() {
             visualizationOptions.showLabels = !visualizationOptions.showLabels;
@@ -454,118 +485,48 @@
 
         // -------------------- Експорт / Принтиране --------------------
         exportBtn.addEventListener('click', function() {
-            const project = engine.exportProject();
-            const dataStr = JSON.stringify(project, null, 2);
+            if (!lastApiResponse) { alert('Няма резултати за експортиране.'); return; }
+            const dataStr = JSON.stringify(lastApiResponse, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             const fileName = `cutlist_project_${new Date().toISOString().slice(0,10)}.json`;
             const a = document.createElement('a');
             a.setAttribute('href', dataUri);
             a.setAttribute('download', fileName);
             a.click();
-            alert('Проектът е експортиран.');
         });
         printBtn.addEventListener('click', () => window.print());
 
-        // -------------------- Помощни функции за обновяване на списъците --------------------
-        function updatePartsList() {
-            partsList.innerHTML = '';
-            if (engine.parts.length === 0) {
-                partsList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма добавени детайли</p>';
-                return;
-            }
-            const grouped = {};
-            engine.parts.forEach(part => {
-                const key = `${part.name}|${part.width}|${part.height}|${part.material}|${part.grainDirection}`;
-                if (!grouped[key]) grouped[key] = { ...part, count: 0 };
-                grouped[key].count++;
-            });
-            Object.values(grouped).forEach(part => {
-                const grainIcon = part.grainDirection === 'horizontal' ? '→' : (part.grainDirection === 'vertical' ? '↑' : '○');
-                const el = document.createElement('div');
-                el.className = 'cabinet-list-item';
-                el.innerHTML = `
-                    <div style="flex:1;">
-                        <strong>${part.name}</strong>
-                        <br><small>${part.width}×${part.height}мм | ${part.material} ${grainIcon} | Брой: ${part.count}</small>
-                    </div>
-                    <button class="btn btn-danger btn-small remove-part-btn" data-key="${part.name}|${part.width}|${part.height}|${part.material}|${part.grainDirection}">🗑️</button>
-                `;
-                partsList.appendChild(el);
-            });
-            document.querySelectorAll('.remove-part-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const key = this.getAttribute('data-key');
-                    removePartByKey(key);
-                });
-            });
-        }
-
-        function updateSheetsList() {
-            sheetsList.innerHTML = '';
-            if (engine.sheets.length === 0) {
-                sheetsList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма добавени листове</p>';
-                return;
-            }
-            engine.sheets.forEach(sheet => {
-                const grainIcon = sheet.grainDirection === 'horizontal' ? '→' : (sheet.grainDirection === 'vertical' ? '↑' : '○');
-                const el = document.createElement('div');
-                el.className = 'cabinet-list-item';
-                el.innerHTML = `
-                    <div style="flex:1;">
-                        <strong>${sheet.name}</strong>
-                        <br><small>${sheet.width}×${sheet.height}мм | ${sheet.materialType} ${grainIcon} | ${sheet.cost} лв.</small>
-                    </div>
-                    <button class="btn btn-danger btn-small remove-sheet-btn" data-id="${sheet.id}">🗑️</button>
-                `;
-                sheetsList.appendChild(el);
-            });
-            document.querySelectorAll('.remove-sheet-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    removeSheet(id);
-                });
-            });
-        }
-
-        function removePartByKey(key) {
-            if (!confirm('Премахване на всички детайли от този тип?')) return;
-            const [name, width, height, material, grainDirection] = key.split('|');
-            engine.parts = engine.parts.filter(p =>
-                !(p.name === name &&
-                  p.width === parseInt(width) &&
-                  p.height === parseInt(height) &&
-                  p.material === material &&
-                  p.grainDirection === grainDirection)
-            );
-            updatePartsList();
-        }
-
-        function removeSheet(id) {
-            if (!confirm('Премахване на лист?')) return;
-            engine.sheets = engine.sheets.filter(s => s.id !== id);
-            updateSheetsList();
-        }
-
         // -------------------- Показване на резултатите --------------------
-        function displayResults(results, statistics) {
+        function displayResults(apiResponse) {
+            const visData = apiResponse.visualizer_data || [];
+            const stats = apiResponse.statistics || {};
+
             noResultsMessage.style.display = 'none';
             resultsContainer.style.display = 'block';
             statsContainer.style.display = 'block';
+            vizControls.style.display = 'flex';
             resultsContainer.innerHTML = '';
             statsGrid.innerHTML = '';
 
-            results.forEach((sheet, index) => {
-                if (!sheet || !sheet.placedParts || sheet.placedParts.length === 0) return;
+            // Визуализация на листовете
+            visData.forEach((sheet, index) => {
                 const sheetContainer = document.createElement('div');
                 sheetContainer.className = 'sheet-container';
                 sheetContainer.id = `sheet-${index}`;
+
+                const partsCount = sheet.placedParts?.length || 0;
+                const efficiency = sheet.efficiency || 0;
+
                 sheetContainer.innerHTML = `
                     <h5>Лист ${index + 1}: ${sheet.width} × ${sheet.height} мм (${sheet.materialType})</h5>
                     <div class="sheet-visualization" id="sheetVisualization${index}"></div>
-                    <p><small>Детайли: ${sheet.placedParts.length} бр. | Ефективност: ${sheet.efficiency ? sheet.efficiency.toFixed(1) : 0}%</small></p>
+                    <p><small>Детайли: ${partsCount} бр. | Ефективност: ${efficiency}% | Grain: ${sheet.grainDirection || 'none'}</small></p>
                 `;
                 resultsContainer.appendChild(sheetContainer);
+
                 try {
+                    visualizationOptions.showGrain = document.getElementById('showGrainViz').checked;
+                    visualizationOptions.showGrainViolations = document.getElementById('showGrainWarnings').checked;
                     const svg = CutListVisualizer.generateSVG(sheet, visualizationOptions);
                     document.getElementById(`sheetVisualization${index}`).innerHTML = svg;
                 } catch (e) {
@@ -574,49 +535,141 @@
                 }
             });
 
-            if (statistics) {
-                statsGrid.innerHTML = `
-                    <div class="stat-card"><div class="stat-label">Общо листове</div><div class="stat-value">${statistics.totalSheets}</div></div>
-                    <div class="stat-card"><div class="stat-label">Общо детайли</div><div class="stat-value">${statistics.totalParts}</div></div>
-                    <div class="stat-card"><div class="stat-label">Поставени детайли</div><div class="stat-value">${statistics.placedParts} (${statistics.placementRate})</div></div>
-                    <div class="stat-card"><div class="stat-label">Ефективност</div><div class="stat-value">${statistics.materialEfficiency}</div></div>
-                    <div class="stat-card ${statistics.grainViolations > 0 ? 'grain-warning' : 'grain-ok'}">
-                        <div class="stat-label">🌾 Grain съответствие</div>
-                        <div class="stat-value">${statistics.grainCompliance}</div>
-                    </div>
-                    <div class="stat-card"><div class="stat-label">Прибл. цена</div><div class="stat-value">${statistics.estimatedCost}</div></div>
-                `;
+            // Неразпределени парчета
+            if (apiResponse.unplaced_parts?.length > 0) {
+                const warn = document.createElement('div');
+                warn.style.cssText = 'background:#f8d7da;color:#721c24;padding:15px;border-radius:8px;margin-top:15px;';
+                warn.innerHTML = `<h5>⚠ Неразпределени парчета (${apiResponse.unplaced_parts.length})</h5><ul>` +
+                    apiResponse.unplaced_parts.map(p => `<li>${p.name} — ${p.width}×${p.height}mm (${p.material})</li>`).join('') +
+                    '</ul>';
+                resultsContainer.appendChild(warn);
+            }
 
-                if (statistics.totalSheetArea > 0) {
-                    const ctx = document.getElementById('materialChart');
-                    if (ctx) {
-                        if (chartInstance) chartInstance.destroy();
-                        chartInstance = new Chart(ctx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Използван', 'Отпадък'],
-                                datasets: [{
-                                    data: [statistics.totalUsedArea, statistics.totalWasteArea],
-                                    backgroundColor: ['#4CAF50', '#FF9800'],
-                                    borderWidth: 1
-                                }]
-                            }
-                        });
-                    }
+            // Остатъци
+            if (apiResponse.reusable_offcuts?.length > 0) {
+                const offcuts = document.createElement('div');
+                offcuts.style.cssText = 'background:#d4edda;color:#155724;padding:15px;border-radius:8px;margin-top:15px;';
+                offcuts.innerHTML = `<h5>♻ Използваеми остатъци (${apiResponse.reusable_offcuts.length})</h5><ul>` +
+                    apiResponse.reusable_offcuts.map(o => `<li>${o.width}×${o.height}mm (${o.material})</li>`).join('') +
+                    '</ul>';
+                resultsContainer.appendChild(offcuts);
+            }
+
+            // Статистика
+            statsGrid.innerHTML = `
+                <div class="stat-card"><div class="stat-label">Общо листове</div><div class="stat-value">${stats.total_sheets || 0}</div></div>
+                <div class="stat-card"><div class="stat-label">Поставени детайли</div><div class="stat-value">${stats.placed_parts || 0}/${stats.total_parts || 0}</div></div>
+                <div class="stat-card"><div class="stat-label">Ефективност</div><div class="stat-value">${stats.efficiency_pct || 0}%</div></div>
+                <div class="stat-card ${(stats.grain_violations || 0) > 0 ? 'grain-warning' : 'grain-ok'}">
+                    <div class="stat-label">🌾 Grain съответствие</div>
+                    <div class="stat-value">${stats.grain_compliance_pct || 100}%</div>
+                </div>
+                <div class="stat-card"><div class="stat-label">Цена материали</div><div class="stat-value">${(stats.estimated_cost_bgn || 0).toFixed(2)} лв.</div></div>
+                <div class="stat-card"><div class="stat-label">Отпадък</div><div class="stat-value">${((stats.waste_area_mm2 || 0) / 1000000).toFixed(2)} m²</div></div>
+            `;
+
+            // Doughnut chart
+            if (stats.total_sheet_area_mm2 > 0) {
+                const ctx = document.getElementById('materialChart');
+                if (ctx) {
+                    if (chartInstance) chartInstance.destroy();
+                    chartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Използван', 'Отпадък'],
+                            datasets: [{
+                                data: [stats.total_used_area_mm2, stats.waste_area_mm2],
+                                backgroundColor: ['#4CAF50', '#FF9800'],
+                                borderWidth: 1
+                            }]
+                        }
+                    });
                 }
             }
         }
 
         function redrawVisualizations() {
-            if (engine.results && engine.results.length) {
-                engine.results.forEach((sheet, idx) => {
-                    const viz = document.getElementById(`sheetVisualization${idx}`);
-                    if (viz) viz.innerHTML = CutListVisualizer.generateSVG(sheet, visualizationOptions);
-                });
-            }
+            if (!lastApiResponse?.visualizer_data) return;
+            visualizationOptions.showGrain = document.getElementById('showGrainViz').checked;
+            visualizationOptions.showGrainViolations = document.getElementById('showGrainWarnings').checked;
+            lastApiResponse.visualizer_data.forEach((sheet, idx) => {
+                const viz = document.getElementById(`sheetVisualization${idx}`);
+                if (viz) {
+                    try { viz.innerHTML = CutListVisualizer.generateSVG(sheet, visualizationOptions); }
+                    catch(e) { console.error('Redraw error:', e); }
+                }
+            });
         }
 
-        // Инициализация
+        // -------------------- Помощни функции за списъците --------------------
+        function updatePartsList() {
+            partsList.innerHTML = '';
+            if (parts.length === 0) {
+                partsList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма добавени детайли</p>';
+                return;
+            }
+            const grouped = {};
+            parts.forEach((part, idx) => {
+                const key = `${part.name}|${part.width}|${part.height}|${part.material}|${part.grain}`;
+                if (!grouped[key]) grouped[key] = { ...part, totalQty: 0, indices: [] };
+                grouped[key].totalQty += (part.quantity || 1);
+                grouped[key].indices.push(idx);
+            });
+            Object.values(grouped).forEach(part => {
+                const grainIcon = part.grain === 'horizontal' ? '→' : (part.grain === 'vertical' ? '↑' : '○');
+                const el = document.createElement('div');
+                el.className = 'cabinet-list-item';
+                el.innerHTML = `
+                    <div style="flex:1;">
+                        <strong>${part.name}</strong>
+                        <br><small>${part.width}×${part.height}мм | ${part.material} ${grainIcon} | Брой: ${part.totalQty}</small>
+                    </div>
+                    <button class="btn btn-danger btn-small remove-part-btn" data-key="${part.name}|${part.width}|${part.height}|${part.material}|${part.grain}">🗑️</button>
+                `;
+                partsList.appendChild(el);
+            });
+            document.querySelectorAll('.remove-part-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const key = this.getAttribute('data-key');
+                    const [name, width, height, material, grain] = key.split('|');
+                    const idx = parts.findIndex(p =>
+                        p.name === name && p.width === parseInt(width) &&
+                        p.height === parseInt(height) && p.material === material && p.grain === grain
+                    );
+                    if (idx >= 0) { parts.splice(idx, 1); updatePartsList(); }
+                });
+            });
+        }
+
+        function updateSheetsList() {
+            sheetsList.innerHTML = '';
+            if (sheets.length === 0) {
+                sheetsList.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">Няма добавени листове</p>';
+                return;
+            }
+            sheets.forEach((sheet, idx) => {
+                const grainIcon = sheet.grain === 'horizontal' ? '→' : (sheet.grain === 'vertical' ? '↑' : '○');
+                const el = document.createElement('div');
+                el.className = 'cabinet-list-item';
+                el.innerHTML = `
+                    <div style="flex:1;">
+                        <strong>${sheet.name}</strong>
+                        <br><small>${sheet.width}×${sheet.height}мм | ${sheet.material} ${grainIcon} | ${sheet.cost} лв.</small>
+                    </div>
+                    <button class="btn btn-danger btn-small remove-sheet-btn" data-idx="${idx}">🗑️</button>
+                `;
+                sheetsList.appendChild(el);
+            });
+            document.querySelectorAll('.remove-sheet-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const idx = parseInt(this.getAttribute('data-idx'));
+                    sheets.splice(idx, 1);
+                    updateSheetsList();
+                });
+            });
+        }
+
+        // -------------------- Инициализация --------------------
         document.addEventListener('DOMContentLoaded', function() {
             updatePartsList();
             updateSheetsList();
