@@ -238,7 +238,7 @@ export const UI = {
 
     // 🆕 ПОКАЗВА/СКРИВА секцията за механизъм
     if (liftSection) {
-        liftSection.style.display = (type === 'upperLift') ? 'block' : 'none';
+        liftSection.style.display = (type === 'upperLift' || type === 'baseMechanism' || type === 'baseBasket') ? 'block' : 'none';
     }
 
     // Автоматично попълване на стойности

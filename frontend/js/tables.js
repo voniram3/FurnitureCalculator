@@ -186,7 +186,7 @@ export const Tables = {
                             </tr>
                             <tr>
                                 <td><strong>Материали</strong></td>
-                                <td class="price-total" id="totalMaterialsPricing">0.00 лв</td>
+                                <td class="price-total" id="totalMaterialsCatalog">0.00 лв</td>
                             </tr>
                             <tr>
                                 <td><strong>Монтаж и ВиК</strong></td>
@@ -199,6 +199,14 @@ export const Tables = {
                             <tr style="background: #f0f0f0;">
                                 <td><strong>Междинна сума</strong></td>
                                 <td class="price-total" id="subtotal">0.00 лв</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Надценка</strong>
+                                    <input type="number" id="markupPercent" value="0" min="-100" max="500" step="1" 
+                                           style="width: 60px; padding: 4px; margin-left: 10px; border: 1px solid #ddd; border-radius: 4px; text-align: right;"> %
+                                </td>
+                                <td class="price-total" id="markupAmount">0.00 лв</td>
                             </tr>
                             <tr>
                                 <td><strong>ДДС (20%)</strong></td>
@@ -214,8 +222,7 @@ export const Tables = {
             </div>
 
             <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="Tables.calculateTotals()">🔄 Изчисли всички цени</button>
-                <button class="btn btn-success" onclick="Tables.autoCalculateFromProject()">🤖 Авто изчисление от проект</button>
+                <button class="btn btn-success" onclick="Tables.autoCalculateFromProject()">🤖 Авто изчисление на проект</button>
             </div>
         `;
 
@@ -258,7 +265,7 @@ export const Tables = {
             html += `
                 <tr data-operation-id="${index}">
                     <td><input type="text" value="${operation.name}" class="operation-name" data-index="${index}"></td>
-                    <td><input type="number" value="0" min="0" step="0.01" class="operation-qty" data-index="${index}"></td>
+                    <td><input type="number" value="0" min="0" step="1" class="operation-qty" data-index="${index}"></td>
                     <td><input type="number" value="${operation.price.toFixed(2)}" min="0" step="0.01" class="operation-price" data-index="${index}"></td>
                     <td class="row-total operation-total">0.00 лв</td>
                     <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
@@ -288,6 +295,11 @@ export const Tables = {
             }
 
             if (e.target.classList.contains('item-price')) {
+                this.calculateTotals();
+            }
+
+            // Надценка
+            if (e.target.id === 'markupPercent') {
                 this.calculateTotals();
             }
         });
@@ -385,13 +397,6 @@ export const Tables = {
             totalOverall += parseFloat(input.value) || 0;
         });
 
-        // Материали
-        let totalMaterials = 0;
-        document.querySelectorAll('.material-total').forEach(cell => {
-            const text = cell.textContent.replace(' лв', '').trim();
-            totalMaterials += parseFloat(text) || 0;
-        });
-
         // Монтаж и услуги
         let totalInstallation = 0;
         document.querySelectorAll('.service-total').forEach(cell => {
@@ -406,10 +411,30 @@ export const Tables = {
             totalLabor += parseFloat(text) || 0;
         });
 
-        // Общо преди ДДС
-        const subtotal = totalOverall + totalMaterials + totalInstallation + totalLabor;
-        const vat = subtotal * 0.2;
-        const grandTotal = subtotal + vat;
+        // Материали от каталог (Materials.selectedMaterials)
+        let totalMaterialsCatalog = 0;
+        const Materials = window.Materials;
+        if (Materials && Materials.selectedMaterials) {
+            Object.values(Materials.selectedMaterials).forEach(sel => {
+                if (sel && sel.material && sel.quantity) {
+                    totalMaterialsCatalog += (sel.material.price || 0) * sel.quantity;
+                }
+            });
+        }
+
+        // Междинна сума
+        const subtotal = totalOverall + totalMaterialsCatalog + totalInstallation + totalLabor;
+
+        // Надценка
+        const markupPercent = parseFloat(document.getElementById('markupPercent')?.value) || 0;
+        const markupAmount = subtotal * (markupPercent / 100);
+
+        // Сума след надценка
+        const afterMarkup = subtotal + markupAmount;
+
+        // ДДС
+        const vat = afterMarkup * 0.2;
+        const grandTotal = afterMarkup + vat;
 
         // Обновяване на дисплея
         const updateElement = (id, value) => {
@@ -418,10 +443,11 @@ export const Tables = {
         };
 
         updateElement('totalOverall', totalOverall);
-        updateElement('totalMaterialsPricing', totalMaterials);
+        updateElement('totalMaterialsCatalog', totalMaterialsCatalog);
         updateElement('totalInstallation', totalInstallation);
         updateElement('totalLabor', totalLabor);
         updateElement('subtotal', subtotal);
+        updateElement('markupAmount', markupAmount);
         updateElement('vat', vat);
         updateElement('grandTotal', grandTotal);
 
@@ -482,7 +508,7 @@ export const Tables = {
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
             <td><input type="text" value="Нова операция" class="operation-name"></td>
-            <td><input type="number" value="0" min="0" step="0.01" class="operation-qty"></td>
+            <td><input type="number" value="0" min="0" step="1" class="operation-qty"></td>
             <td><input type="number" value="0.00" min="0" step="0.01" class="operation-price"></td>
             <td class="row-total operation-total">0.00 лв</td>
             <td><button class="delete-row-btn" onclick="Tables.deleteRow(this)">🗑️</button></td>
@@ -584,12 +610,30 @@ export const Tables = {
 
         totalEdgeLength = totalBodyEdge + totalDoorEdge;
 
+        // 🆕 Бройка плотове и гръбове (от Materials.selectedMaterials)
+        let totalPlotove = 0;
+        let totalGrubove = 0;
+        const Materials = window.Materials;
+        if (Materials && Materials.selectedMaterials) {
+            if (Materials.selectedMaterials.plotove_plot) {
+                totalPlotove = Materials.selectedMaterials.plotove_plot.quantity || 0;
+            }
+        }
+        // Гръбовете = брой шкафове с has_back !== false
+        project.forEach(cabinet => {
+            const qty = cabinet.quantity || 1;
+            if (cabinet.has_back !== false && cabinet.type !== 'panel' && cabinet.type !== 'plinth') {
+                totalGrubove += qty;
+            }
+        });
+
         console.log(`  Компоненти: ${totalComponents}`);
         console.log(`  Чекмеджета: ${totalDrawers}`);
         console.log(`  Панти: ${totalHinges}`);
         console.log(`  Рафтове: ${totalShelves}`);
         console.log(`  Кант корпус: ${totalBodyEdge.toFixed(2)}м`);
         console.log(`  Кант врати: ${totalDoorEdge.toFixed(2)}м`);
+        console.log(`  Плотове: ${totalPlotove}, Гръбове: ${totalGrubove}`);
 
         // ПОПЪЛВАНЕ НА ТРУД
         const laborRows = document.querySelectorAll('#laborTableBody tr');
@@ -607,19 +651,24 @@ export const Tables = {
                 this.calculateOperationRow(qtyInput);
             }
             
-            // Рязане = общ брой компоненти
-            if (operationName.includes('рязане') && !operationName.includes('криволинейно')) {
+            // 🔧 ПОПРАВКА: "Рязане на плот/гръб" = бройка плотове + бройка гръбове
+            if (operationName.includes('рязане') && (operationName.includes('плот') || operationName.includes('гръб'))) {
+                qtyInput.value = totalPlotove + totalGrubove;
+                this.calculateOperationRow(qtyInput);
+            }
+            // Рязане (обикновено) = общ брой компоненти за рязане (без плот/гръб)
+            else if (operationName.includes('рязане') && !operationName.includes('криволинейно') && !operationName.includes('плот') && !operationName.includes('гръб')) {
                 qtyInput.value = totalComponents;
                 this.calculateOperationRow(qtyInput);
             }
             
-            // Кантиране корпус (1мм)
+            // Кантиране корпус (0,8мм)
             if (operationName.includes('кантиране') && operationName.includes('0,8')) {
                 qtyInput.value = totalBodyEdge.toFixed(2);
                 this.calculateOperationRow(qtyInput);
             }
             
-            // Кантиране врати (2мм)
+            // Кантиране врати (1 до 2мм)
             if (operationName.includes('кантиране') && operationName.includes('1 до 2')) {
                 qtyInput.value = totalDoorEdge.toFixed(2);
                 this.calculateOperationRow(qtyInput);
@@ -628,6 +677,12 @@ export const Tables = {
             // Монтаж на чекмедже
             if (operationName.includes('монтаж') && operationName.includes('чекмедже')) {
                 qtyInput.value = totalDrawers;
+                this.calculateOperationRow(qtyInput);
+            }
+
+            // 🆕 Панти
+            if (operationName.includes('панти') || (operationName.includes('монтаж') && operationName.includes('пант'))) {
+                qtyInput.value = totalHinges;
                 this.calculateOperationRow(qtyInput);
             }
         });
@@ -649,6 +704,115 @@ export const Tables = {
             }
         });
 
+        // ═══════════════════════════════════════════════════════
+        // 🆕 ОБНОВЯВАНЕ НА БРОЙКИ МАТЕРИАЛИ В КАТАЛОГА
+        // Само материалите, които реално се използват от шкафовете
+        // ═══════════════════════════════════════════════════════
+        if (Materials && Materials.selectedMaterials) {
+            console.log('📦 Обновяване на бройки материали...');
+
+            // Събираме бройки по категория от елементите
+            let totalLegs = 0;          // крака
+            let totalShelfHolders = 0;  // рафтодържачи
+            let totalGuides = 0;        // водачи за чекмеджета
+            let totalLiftMechs = 0;     // повдигащи механизми
+            let totalBackCount = 0;     // гръбове
+
+            project.forEach(cabinet => {
+                const qty = cabinet.quantity || 1;
+                const elements = Calculator.generateCabinetElements ?
+                    Calculator.generateCabinetElements(cabinet) : [];
+
+                elements.forEach(el => {
+                    const elQty = (el.quantity || 0) * qty;
+
+                    if (el.name === 'Крака') totalLegs += elQty;
+                    if (el.name === 'Рафтодържачи') totalShelfHolders += elQty;
+                    if (el.name === 'Водачи') totalGuides += elQty;
+                    if (el.name === 'Панти') totalHinges += 0; // вече пресметнати горе
+                    if (el.category === 'back') totalBackCount += elQty;
+                    if (el.name && el.name.includes('Повдигащ механизъм')) totalLiftMechs += elQty;
+                });
+            });
+
+            console.log(`  Крака: ${totalLegs}, Панти: ${totalHinges}, Рафтодържачи: ${totalShelfHolders}`);
+            console.log(`  Водачи: ${totalGuides}, Повдигащи: ${totalLiftMechs}, Гръбове: ${totalBackCount}`);
+
+            // Обновяваме само избраните (маркираните) материали
+            // Ако материалът е избран но не е нужен — бройка = 0
+
+            // Панти
+            if (Materials.selectedMaterials.panti) {
+                Materials.selectedMaterials.panti.quantity = totalHinges;
+            }
+            // Крака
+            if (Materials.selectedMaterials.kraka) {
+                Materials.selectedMaterials.kraka.quantity = totalLegs;
+            }
+            // Чекмеджета (системи за чекмеджета = брой чекмеджета)
+            if (Materials.selectedMaterials.chekmedzheta) {
+                Materials.selectedMaterials.chekmedzheta.quantity = totalDrawers;
+            }
+            // Повдигащи механизми
+            if (Materials.selectedMaterials.povdigashti) {
+                Materials.selectedMaterials.povdigashti.quantity = totalLiftMechs;
+            }
+            // Окачвачи = брой горни шкафове * 2
+            if (Materials.selectedMaterials.okachvachi) {
+                const upperCount = project.filter(c =>
+                    c.type === 'upper' || c.type === 'upperLift'
+                ).reduce((sum, c) => sum + (c.quantity || 1), 0);
+                Materials.selectedMaterials.okachvachi.quantity = upperCount * 2;
+            }
+            // Дръжки — долни
+            if (Materials.selectedMaterials.drujki_lower) {
+                const lowerDoors = project.filter(c =>
+                    c.type === 'base' || c.type === 'sink' || c.type === 'oven' || c.type === 'blind'
+                ).reduce((sum, c) => sum + ((c.door_count || 0) * (c.quantity || 1)), 0);
+                const lowerDrawers = project.filter(c => c.type === 'drawer')
+                    .reduce((sum, c) => sum + ((c.drawer_count || 0) * (c.quantity || 1)), 0);
+                Materials.selectedMaterials.drujki_lower.quantity = lowerDoors + lowerDrawers;
+            }
+            // Дръжки — горни
+            if (Materials.selectedMaterials.drujki_upper) {
+                const upperDoors = project.filter(c =>
+                    c.type === 'upper' || c.type === 'upperLift'
+                ).reduce((sum, c) => sum + ((c.door_count || 0) * (c.quantity || 1)), 0);
+                Materials.selectedMaterials.drujki_upper.quantity = upperDoors;
+            }
+            // Други (рафтодържачи) — само ако реално има рафтове
+            if (Materials.selectedMaterials.drugi && totalShelfHolders > 0) {
+                Materials.selectedMaterials.drugi.quantity = totalShelfHolders;
+            }
+            // Кантове (общо метри)
+            if (Materials.selectedMaterials.kantove) {
+                Materials.selectedMaterials.kantove.quantity = Math.ceil(totalEdgeLength);
+            }
+            // Плотове — потребителят задава ръчно
+            // Кошници/Бутилкови механизми — за baseBasket шкафове
+            if (Materials.selectedMaterials.butilieri) {
+                const basketCount = project.filter(c => c.type === 'baseBasket')
+                    .reduce((sum, c) => sum + (c.quantity || 1), 0);
+                Materials.selectedMaterials.butilieri.quantity = basketCount;
+            }
+            // Механизми за долен шкаф — за baseMechanism шкафове
+            if (Materials.selectedMaterials.mehanizmiDolen) {
+                const mechCount = project.filter(c => c.type === 'baseMechanism')
+                    .reduce((sum, c) => sum + (c.quantity || 1), 0);
+                Materials.selectedMaterials.mehanizmiDolen.quantity = mechCount;
+            }
+            // Повдигащи — включваме и baseMechanism ако има
+            if (Materials.selectedMaterials.povdigashti) {
+                const liftCount = project.filter(c => c.type === 'upperLift')
+                    .reduce((sum, c) => sum + (c.quantity || 1), 0);
+                Materials.selectedMaterials.povdigashti.quantity = liftCount;
+            }
+
+            // Запазваме и обновяваме UI
+            if (Materials.saveSelections) Materials.saveSelections();
+            if (Materials.renderMaterialsTab) Materials.renderMaterialsTab();
+        }
+
         // Преизчисляване на всички тотали
         this.calculateTotals();
         
@@ -657,7 +821,24 @@ export const Tables = {
               `🔨 Компоненти: ${totalComponents} бр\n` +
               `📏 Кант корпус: ${totalBodyEdge.toFixed(2)} м\n` +
               `📏 Кант врати: ${totalDoorEdge.toFixed(2)} м\n` +
-              `🗃️ Чекмеджета: ${totalDrawers} бр`);
+              `🗃️ Чекмеджета: ${totalDrawers} бр\n` +
+              `🦵 Крака: ${totalLegs || 0} бр\n` +
+              `🔩 Панти: ${totalHinges} бр`);
+
+        // 🆕 Background cutlist оптимизация → обновява бройки плоскости в Materials
+        const CutListBridge = window.CutListBridge;
+        if (CutListBridge && CutListBridge.runBackgroundOptimization) {
+            console.log('📐 Стартиране на background cutlist оптимизация...');
+            CutListBridge.runBackgroundOptimization().then(result => {
+                if (result) {
+                    console.log('✅ Background cutlist завършен, бройки плоскости обновени');
+                    // Преизчисляваме тоталите с новите бройки
+                    this.calculateTotals();
+                }
+            }).catch(err => {
+                console.warn('⚠️ Background cutlist грешка:', err);
+            });
+        }
     },
 
     // Обновяване на списъка с профили

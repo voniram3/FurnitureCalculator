@@ -191,6 +191,8 @@ export const Calculator = {
             'oven': 'Долен шкаф фурна',
             'sink': 'Долен шкаф мивка',
             'blind': 'Долен глух шкаф',
+            'baseMechanism': 'Долен шкаф с механизъм',
+            'baseBasket': 'Долен шкаф с кошница',
             'fridge': 'Колона хладилник',
             'column': 'Колона',
             'panel': 'Панел',
@@ -327,7 +329,7 @@ export const Calculator = {
             }
 
             // ✅ СТАБИЛИЗАТОРИ (само в Метод 1 и само за долни)
-            if (type === 'base' || type === 'sink' || type === 'oven' || type === 'drawer' || type === 'blind') {
+            if (type === 'base' || type === 'sink' || type === 'oven' || type === 'drawer' || type === 'blind' || type === 'baseMechanism' || type === 'baseBasket') {
                 let stabCount = 2;
                 if (type === 'sink' || w >= 800) {
                     stabCount = 3;
@@ -413,7 +415,7 @@ export const Calculator = {
         }
 
         // Крака (само за долни шкафове)
-        if (type === 'base' || type === 'sink' || type === 'oven' || type === 'blind' || type === 'drawer') {
+        if (type === 'base' || type === 'sink' || type === 'oven' || type === 'blind' || type === 'drawer' || type === 'baseMechanism' || type === 'baseBasket') {
             const legCount = w >= 800 ? 6 : 4;
             elements.push({
                 name: 'Крака',
@@ -423,8 +425,8 @@ export const Calculator = {
             });
         }
 
-        // Панти - САМО ако има врати И НЕ е upperLift
-        if (cabinet.door_count > 0 && type !== 'upperLift') {
+        // Панти - САМО ако има врати И НЕ е upperLift И НЕ е baseBasket (вратичката е на механизма)
+        if (cabinet.door_count > 0 && type !== 'upperLift' && type !== 'baseBasket') {
             elements.push({
                 name: 'Панти',
                 quantity: cabinet.door_count * 2,

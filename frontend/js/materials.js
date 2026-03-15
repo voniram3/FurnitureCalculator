@@ -20,8 +20,11 @@ export const Materials = {
         drujki_lower: null,
         drujki_upper: null,
         
+        // Плот и гръб - 2 подменюта
+        plotove_plot: null,
+        plotove_grub: null,
+        
         // Останалите категории - директно
-        plotove: null,
         panti: null,
         povdigashti: null,
         butilieri: null,
@@ -106,6 +109,12 @@ export const Materials = {
             { key: 'panels', name: 'Допълнителни плоскости' },
             { key: 'plinth', name: 'Цокъл' }
         ]);
+
+        // ПЛОТ И ГРЪБ - с 2 подменюта
+        html += this.renderCategoryWithSubmenu('plotove', [
+            { key: 'plot', name: 'Плотове' },
+            { key: 'grub', name: 'Гръб' }
+        ]);
         
         // ДРЪЖКИ - с 2 подменюта
         html += this.renderCategoryWithSubmenu('drujki', [
@@ -114,7 +123,7 @@ export const Materials = {
         ]);
         
         // Останалите категории - без подменюта
-        const simpleCategories = ['plotove', 'panti', 'povdigashti', 'butilieri', 
+        const simpleCategories = ['panti', 'povdigashti', 'butilieri', 
                                  'mehanizmiDolen', 'okachvachi', 'chekmedzheta', 
                                  'kraka', 'drugi', 'kantove'];
         
