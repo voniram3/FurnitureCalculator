@@ -55,18 +55,7 @@ class OvenCabinetCalculator(CabinetCalculator):
         )
         result.add_panel(oven_bottom)
         
-        # === СТРАНИЧНИ ПАНЕЛИ ЗА ФУРНАТА ===
-        # Допълнителни укрепващи панели за фурната
-        oven_side_panel = Panel(
-            name="Страничен панел за фурна",
-            width_mm=560,  # стандартна височина на фурна
-            height_mm=cabinet.depth,
-            material=MaterialType.BODY,
-            edge_front=1.0,
-            quantity=2
-        )
-        result.add_panel(oven_side_panel)
-        
+
         # === ГРЪБ ===
         # Шкафът за фурна няма заден панел за вентилация
         # но ако се изисква:

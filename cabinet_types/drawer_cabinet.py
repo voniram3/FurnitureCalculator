@@ -82,24 +82,11 @@ class DrawerCabinetCalculator(CabinetCalculator):
             )
             result.add_panel(back_panel)
         
-        # === ВЪТРЕШНИ ПАНЕЛИ ЗА ЧЕКМЕДЖЕТА ===
-        drawer_count = cabinet.door_count or 3  # door_count се използва за drawer_count
-        
-        # Вътрешни панели (разделящи чекмеджетата)
-        if drawer_count > 1:
-            internal_panel = Panel(
-                name="Вътрешен панел",
-                width_mm=cabinet.depth - 40,  # 40мм за водачи
-                height_mm=cabinet.height - 100,  # пространство за дъно
-                material=MaterialType.BODY,
-                quantity=drawer_count - 1
-            )
-            result.add_panel(internal_panel)
-        
+
         # === ФАСАДИ ЗА ЧЕКМЕДЖЕТА ===
         if cabinet.door_board:
             # Изчисляваме височина на всяка фасада
-            total_drawer_height = cabinet.height - 100  # 100мм за дъно и стабилизатори
+            total_drawer_height = cabinet.height
             drawer_height = total_drawer_height / drawer_count
             
             drawer_facade = Panel(
@@ -115,18 +102,7 @@ class DrawerCabinetCalculator(CabinetCalculator):
             )
             result.add_panel(drawer_facade)
         
-        # === ДОПЪЛНИТЕЛНО ДЪНО (ако се налага) ===
-        if cabinet.width > 600:
-            additional_bottom = Panel(
-                name="Допълнително дъно",
-                width_mm=bottom_width,
-                height_mm=cabinet.depth,
-                material=MaterialType.BODY,
-                edge_front=1.0,
-                quantity=1
-            )
-            result.add_panel(additional_bottom)
-        
+
         # === ХАРДУЕР ===
         # Крака за чекмеджета (по-малко от обикновен шкаф)
         leg_count = 4 if cabinet.width <= 600 else 6

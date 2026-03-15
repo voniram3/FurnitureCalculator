@@ -42,11 +42,24 @@ class UpperCabinetCalculator(CabinetCalculator):
         )
         result.add_panel(side_panel)
         
-        # === ПОЛАВА (горен дъно) ===
+        # === Капак (горен дъно) ===
         top_width = cabinet.width - 2 * t
             
         top_panel = Panel(
-            name="Пола",
+            name="Kапак",
+            width_mm=top_width,
+            height_mm=cabinet.depth,
+            material=MaterialType.BODY,
+            edge_front=1.0,
+            quantity=1
+        )
+        result.add_panel(top_panel)
+
+        # === Дъно (горен дъно) ===
+        top_width = cabinet.width - 2 * t
+
+        top_panel = Panel(
+            name="Дъно",
             width_mm=top_width,
             height_mm=cabinet.depth,
             material=MaterialType.BODY,
@@ -150,9 +163,9 @@ class UpperCabinetCalculator(CabinetCalculator):
             ))
         
         # Закачалки за горни шкафове
-        hanger_count = 2 if cabinet.width <= 600 else 3
+        hanger_count = 2
         result.add_hardware(HardwareItem(
-            name="Закачалка за горен шкаф",
+            name="Окачвач за горен шкаф",
             quantity=hanger_count
         ))
         
