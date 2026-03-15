@@ -20,6 +20,7 @@
             <div class="tab" data-tab="materials">🔧 Материали</div>
             <div class="tab" data-tab="pricing">💰 Ценообразуване</div>
             <div class="tab" data-tab="history">📜 История</div>
+            <div class="tab" data-tab="cutlist">✂️ Разкрояване</div>
         </div>
 
         <!-- Съдържание на табовете -->
@@ -62,6 +63,14 @@
                     <button class="btn btn-warning" id="exportProjectBtn">📊 Експорт</button>
                     <button class="btn btn-danger" id="clearProjectBtn">🗑️ Изчисти</button>
                 </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #e0e0e0;">
+                    <button class="btn btn-success" id="sendToCutListBtn" style="width: 100%; padding: 14px; font-size: 1.05em; background: linear-gradient(135deg, #28a745, #20c997);">
+                        ✂️ Изпрати към разкрояване
+                    </button>
+                    <p style="color: #888; font-size: 0.85em; margin-top: 8px; text-align: center;">
+                        Извлича всички панели и ги оптимизира за минимален отпадък
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -87,10 +96,76 @@
                 <button class="btn btn-danger" id="clearHistoryBtn">🗑️ Изчисти история</button>
             </div>
         </div>
+
+        <div id="cutlist" class="tab-content">
+            <h2 class="section-title">✂️ Разкрояване на материали</h2>
+            <p class="section-description">Оптимизирай разкрояването на всички панели от проекта</p>
+            
+            <div class="form-section">
+                <div id="cutlistProjectSummary" style="margin-bottom: 20px;">
+                    <p style="color: #888; text-align: center; padding: 20px;">
+                        Добавете шкафове в проекта, за да видите обобщение тук.
+                    </p>
+                </div>
+
+                <div id="cutlistMaterialSettings" style="display: none;">
+                    <h4 style="margin-bottom: 15px; color: #667eea;">📦 Настройки на материали</h4>
+                    
+                    <div id="cutlistMaterialGroups"></div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0;">⚙️ Параметри на оптимизацията</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="font-size: 0.9em; color: #666;">Дебелина на реза (mm):</label>
+                                <input type="number" id="cutlistSawKerf" min="0" max="10" step="0.5" value="4" 
+                                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; color: #666;">Мин. остатък (mm):</label>
+                                <input type="number" id="cutlistMinOffcut" min="0" step="10" value="100"
+                                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em;">
+                                <input type="checkbox" id="cutlistAllowRotation" checked> Позволи завъртане
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em;">
+                                <input type="checkbox" id="cutlistRespectGrain" checked> Спазвай grain direction
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em;">
+                                <input type="checkbox" id="cutlistMultiPass" checked> Multi-pass оптимизация
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; text-align: center;">
+                    <button class="btn btn-success" id="cutlistOptimizeBtn" 
+                            style="padding: 14px 30px; font-size: 1.1em; background: linear-gradient(135deg, #28a745, #20c997);">
+                        ✂️ Оптимизирай разкрояването
+                    </button>
+                    <button class="btn" id="cutlistOpenFullBtn" style="margin-left: 15px;">
+                        🔗 Отвори пълен оптимизатор
+                    </button>
+                </div>
+            </div>
+            
+            <div id="cutlistResults" style="margin-top: 20px; display: none;">
+                <div class="form-section">
+                    <h4 style="color: #28a745;">📊 Резултати от оптимизацията</h4>
+                    <div id="cutlistStatsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;"></div>
+                    <div id="cutlistVisualization"></div>
+                    <div id="cutlistCabinetLegend" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Зареждане на JavaScript модули -->
     <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/cutlist/cutlist-init.js"></script>
     <script src="/js/xlsx.full.min.js"></script>
 </body>
 </html>

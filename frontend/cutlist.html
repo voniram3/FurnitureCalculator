@@ -22,8 +22,15 @@
 <body>
     <div class="cutlist-container">
         <header class="cutlist-header">
-            <h1>✂️ Cut-list Оптимизатор v3.0</h1>
-            <p>Професионално разкрояване с поддръжка на Grain Direction</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>✂️ Cut-list Оптимизатор v3.0</h1>
+                    <p>Професионално разкрояване с поддръжка на Grain Direction</p>
+                </div>
+                <a href="/index.html" class="btn" style="text-decoration: none; white-space: nowrap; padding: 10px 20px;">
+                    ← Обратно към калкулатора
+                </a>
+            </div>
         </header>
 
         <div class="cutlist-grid">
@@ -146,7 +153,37 @@
                     </div>
                 </div>
 
+                <!-- Банер за импортирани данни от проект -->
+                <div id="importBanner" style="display: none; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="margin: 0;">📦 Импортирани данни от проект</h4>
+                            <p id="importBannerInfo" style="margin: 5px 0 0; opacity: 0.9; font-size: 0.9em;"></p>
+                        </div>
+                        <button id="clearImportBtn" class="btn btn-small" style="background: rgba(255,255,255,0.2); color: white; border: none;">✕ Изчисти</button>
+                    </div>
+                    <div id="importCabinetLegend" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                </div>
+
                 <h3 style="margin-top: 30px;">2. Листове материал</h3>
+
+                <!-- Бързо добавяне от каталог -->
+                <div style="margin-bottom: 15px; padding: 12px; background: #e8f5e9; border-radius: 8px;">
+                    <label style="font-weight: 600; color: #2e7d32; font-size: 0.95em;">📋 Бързо добавяне от каталог:</label>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <select id="sheetCatalog" style="flex: 1; padding: 8px; border: 1px solid #c8e6c9; border-radius: 6px; font-size: 0.95em;">
+                            <option value="">— Избери стандартен лист —</option>
+                            <option value="ПДЧ 18мм|2800|2070|45|none|18">ПДЧ 18мм 2800×2070 (45 лв.)</option>
+                            <option value="ПДЧ 36мм|2800|2070|85|none|36">ПДЧ 36мм 2800×2070 (85 лв.)</option>
+                            <option value="МДФ 18мм|2800|2070|55|none|18">МДФ 18мм 2800×2070 (55 лв.)</option>
+                            <option value="ХДЛ 18мм|2800|2070|65|horizontal|18">ХДЛ 18мм 2800×2070 (65 лв.)</option>
+                            <option value="Масив 20мм|2500|1250|180|horizontal|20">Масив 20мм 2500×1250 (180 лв.)</option>
+                            <option value="ХДФ 3мм|2800|2070|12|none|3">ХДФ/Гръб 3мм 2800×2070 (12 лв.)</option>
+                        </select>
+                        <button type="button" id="addFromCatalogBtn" class="btn btn-success" style="white-space: nowrap;">➕ Добави</button>
+                    </div>
+                </div>
+
                 <form id="sheetForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -670,9 +707,107 @@
         }
 
         // -------------------- Инициализация --------------------
+        let importedCabinetColors = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             updatePartsList();
             updateSheetsList();
+
+            // ──── Каталог dropdown за бързо добавяне на листове ────
+            const catalogSelect = document.getElementById('sheetCatalog');
+            const addFromCatalogBtn = document.getElementById('addFromCatalogBtn');
+            if (addFromCatalogBtn) {
+                addFromCatalogBtn.addEventListener('click', function() {
+                    const val = catalogSelect?.value;
+                    if (!val) { alert('Изберете лист от каталога!'); return; }
+                    const [material, width, height, cost, grain, thickness] = val.split('|');
+                    sheets.push({
+                        name: `${material} ${width}×${height}`,
+                        width: parseInt(width), height: parseInt(height),
+                        cost: parseFloat(cost), material, grain,
+                        thickness_mm: parseFloat(thickness)
+                    });
+                    updateSheetsList();
+                    catalogSelect.value = '';
+                });
+            }
+
+            // ──── Зареждане на импортирани данни от проект ────
+            let imported = null;
+            try {
+                // Опит 1: sessionStorage
+                let raw = sessionStorage.getItem('cutlist_import_data');
+                let timestamp = sessionStorage.getItem('cutlist_import_timestamp');
+
+                // Опит 2: localStorage (fallback)
+                if (!raw) {
+                    raw = localStorage.getItem('cutlist_import_data');
+                    timestamp = localStorage.getItem('cutlist_import_timestamp');
+                }
+
+                if (raw && timestamp) {
+                    const age = Date.now() - parseInt(timestamp);
+                    if (age < 10 * 60 * 1000) { // max 10 минути
+                        imported = JSON.parse(raw);
+                    }
+                }
+
+                // Изчистваме и двете хранилища
+                sessionStorage.removeItem('cutlist_import_data');
+                sessionStorage.removeItem('cutlist_import_timestamp');
+                localStorage.removeItem('cutlist_import_data');
+                localStorage.removeItem('cutlist_import_timestamp');
+            } catch (e) {
+                console.error('Error loading imported data:', e);
+            }
+
+            if (imported && imported.parts?.length > 0) {
+                imported.parts.forEach(p => parts.push(p));
+                updatePartsList();
+
+                if (imported.sheets?.length > 0) {
+                    imported.sheets.forEach(s => sheets.push(s));
+                    updateSheetsList();
+                }
+
+                if (imported.cabinetColors) {
+                    importedCabinetColors = imported.cabinetColors;
+                }
+
+                // Показваме банера
+                const banner = document.getElementById('importBanner');
+                const bannerInfo = document.getElementById('importBannerInfo');
+                const legendDiv = document.getElementById('importCabinetLegend');
+
+                if (banner) {
+                    banner.style.display = 'block';
+                    const totalPieces = imported.parts.reduce((sum, p) => sum + (p.quantity || 1), 0);
+                    if (bannerInfo) bannerInfo.textContent = `${imported.parts.length} уникални детайли (${totalPieces} парчета), ${imported.sheets.length} листа`;
+
+                    if (legendDiv && imported.cabinetColors) {
+                        let legendHtml = '';
+                        for (const [id, cab] of Object.entries(imported.cabinetColors)) {
+                            legendHtml += `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(255,255,255,0.2); border-radius: 12px; font-size: 0.8em;">
+                                <span style="width: 10px; height: 10px; border-radius: 2px; background: ${cab.color};"></span>${cab.name}</span>`;
+                        }
+                        legendDiv.innerHTML = legendHtml;
+                    }
+                }
+
+                console.log(`✅ Imported ${imported.parts.length} parts, ${imported.sheets.length} sheets from project`);
+            }
+
+            // ──── Бутон за изчистване на импорт ────
+            const clearImportBtn = document.getElementById('clearImportBtn');
+            if (clearImportBtn) {
+                clearImportBtn.addEventListener('click', function() {
+                    parts.length = 0; sheets.length = 0;
+                    importedCabinetColors = null;
+                    updatePartsList(); updateSheetsList();
+                    document.getElementById('importBanner').style.display = 'none';
+                });
+            }
+
             document.getElementById('partName').focus();
         });
     </script>
