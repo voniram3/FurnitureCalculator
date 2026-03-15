@@ -6,12 +6,19 @@ export const cabinetTypes = {
         defaultWidth: 600, defaultHeight: 760, defaultDepth: 560,
         defaultShelves: 1, defaultDoors: 2, defaultDrawers: 0
     },
-    'upper': {
-        icon: '📦', name: 'Горен шкаф',
-        description: 'Горен кухненски шкаф с монтажна система',
-        defaultWidth: 600, defaultHeight: 720, defaultDepth: 320,
-        defaultShelves: 2, defaultDoors: 2, defaultDrawers: 0
+    'baseMechanism': {
+        icon: '🔧', name: 'Долен шкаф с механизъм',
+        description: 'Долен шкаф с механизъм (cargo, въртящ и др.)',
+        defaultWidth: 600, defaultHeight: 760, defaultDepth: 560,
+        defaultShelves: 0, defaultDoors: 1, defaultDrawers: 0
     },
+    'baseBasket': {
+        icon: '🧺', name: 'Долен шкаф с кошница/бутилков механизъм',
+        description: 'Долен шкаф с кошница или бутилков механизъм (без панти)',
+        defaultWidth: 450, defaultHeight: 760, defaultDepth: 560,
+        defaultShelves: 0, defaultDoors: 1, defaultDrawers: 0
+    },
+
     'drawer': {
         icon: '🗃️', name: 'Шкаф чекмедже',
         description: 'Шкаф с множество чекмеджета',
@@ -36,7 +43,7 @@ export const cabinetTypes = {
         defaultWidth: 900, defaultHeight: 760, defaultDepth: 560,
         defaultShelves: 1, defaultDoors: 1, defaultDrawers: 0
     },
-    'fridge': {
+        'fridge': {
         icon: '❄️', name: 'Вграден хладилник',
         description: 'Колона за вграждане на хладилник',
         defaultWidth: 600, defaultHeight: 2100, defaultDepth: 560,
@@ -47,6 +54,12 @@ export const cabinetTypes = {
         description: 'Висока колона за съхранение',
         defaultWidth: 600, defaultHeight: 2100, defaultDepth: 560,
         defaultShelves: 3, defaultDoors: 2, defaultDrawers: 0
+    },
+    'upper': {
+        icon: '📦', name: 'Горен шкаф',
+        description: 'Горен кухненски шкаф с монтажна система',
+        defaultWidth: 600, defaultHeight: 720, defaultDepth: 320,
+        defaultShelves: 2, defaultDoors: 2, defaultDrawers: 0
     },
      'upperLift': {
         name: 'Горен шкаф с механизъм',

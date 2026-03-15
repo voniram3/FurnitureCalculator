@@ -12,11 +12,11 @@ export const materialCategories = {
     },
     
     plotove: {
-        name: '🔨 Плотове и гръбове',
+        name: '🔨 Плот и гръб',
         icon: '🔨',
         jsonFile: 'plotove.json',
         unit: 'лист',
-        description: 'Плотове, гръбове и фазери',
+        description: 'Плотове и гръбове',
         items: []
     },
     
@@ -39,11 +39,11 @@ export const materialCategories = {
     },
     
     butilieri: {
-        name: '🍷 Бутилиери',
-        icon: '🍷',
+        name: '🧺 Кошници и Бутилкови механизми',
+        icon: '🧺',
         jsonFile: 'butilieri.json',
         unit: 'комплект',
-        description: 'Механизми за бутилкови шкафове',
+        description: 'Кошници, бутилкови механизми и карго системи',
         items: []
     },
     
