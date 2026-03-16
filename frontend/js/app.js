@@ -5,6 +5,7 @@ import { Tables } from './tables.js';
 import { Calculator } from './calculator.js';
 import { Api } from './api.js';
 import { Materials } from './materials.js';
+import { Cabinet3D } from './cabinet3d.js';
 
 // Стартиране на приложението при зареждане на DOM
 document.addEventListener('DOMContentLoaded', async () => {

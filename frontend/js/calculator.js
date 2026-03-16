@@ -190,7 +190,7 @@ export const Calculator = {
             'drawer': 'Долен шкаф чекмедже',
             'oven': 'Долен шкаф фурна',
             'sink': 'Долен шкаф мивка',
-            'blind': 'Долен глух шкаф',
+            'blind': 'Ъглов шкаф',
             'baseMechanism': 'Долен шкаф с механизъм',
             'baseBasket': 'Долен шкаф с кошница',
             'fridge': 'Колона хладилник',
@@ -375,17 +375,48 @@ export const Calculator = {
 
         // Врати / Вратички
         if (cabinet.door_count > 0) {
-            const doorHeight = this.calculateDoorHeight(cabinet);
-            const doorWidth = this.calculateDoorWidth(cabinet);
+            // 🆕 Хладилник: врати разделени хоризонтално (1/3 долна, 2/3 горна)
+            if (type === 'fridge' && cabinet.door_count === 2) {
+                const doorWidth = w - 3;
+                const bottomDoorH = Math.floor((h - 3) / 3);
+                const topDoorH = (h - 3) - bottomDoorH - 3; // 3мм процеп между тях
 
-            const doorName = (cabinet.door_count === 1 || type === 'oven') ? 'Вратичка' : 'Вратички';
+                elements.push({
+                    name: 'Врата долна (хладилник)',
+                    quantity: 1,
+                    size: `${doorWidth}x${bottomDoorH} мм`,
+                    category: 'door'
+                });
+                elements.push({
+                    name: 'Врата горна (хладилник)',
+                    quantity: 1,
+                    size: `${doorWidth}x${topDoorH} мм`,
+                    category: 'door'
+                });
+            }
+            // 🆕 Фурна: няма обикновени врати, само чекмедже лице
+            else if (type === 'oven') {
+                // Вратичка/лице на чекмедже = 145мм височина
+                const doorWidth = this.calculateDoorWidth(cabinet);
+                elements.push({
+                    name: 'Вратичка (лице чекмедже)',
+                    quantity: cabinet.door_count,
+                    size: `${doorWidth}x${145} мм`,
+                    category: 'door'
+                });
+            }
+            else {
+                const doorHeight = this.calculateDoorHeight(cabinet);
+                const doorWidth = this.calculateDoorWidth(cabinet);
+                const doorName = cabinet.door_count === 1 ? 'Вратичка' : 'Вратички';
 
-            elements.push({
-                name: doorName,
-                quantity: cabinet.door_count,
-                size: `${doorWidth}x${doorHeight} мм`,
-                category: 'door'
-            });
+                elements.push({
+                    name: doorName,
+                    quantity: cabinet.door_count,
+                    size: `${doorWidth}x${doorHeight} мм`,
+                    category: 'door'
+                });
+            }
         }
 
         // Чекмеджета
@@ -401,16 +432,49 @@ export const Calculator = {
             });
         }
 
-        // Гръб
+        // Гръб (вграден или външен)
         if (cabinet.has_back !== false) {
-            const backWidth = w - 1;
-            const backHeight = h - 1;
+            const backType = cabinet.back_type || 'internal'; // 'internal' или 'external'
+            let backWidth, backHeight;
+            
+            if (backType === 'external') {
+                // Външен гръб: (w-1) x (h-1)
+                backWidth = w - 1;
+                backHeight = h - 1;
+            } else {
+                // Вграден гръб: (w-18) x (h-18)
+                backWidth = w - 18;
+                backHeight = h - 18;
+            }
 
             elements.push({
-                name: 'Гръб',
+                name: backType === 'external' ? 'Гръб (външен)' : 'Гръб (вграден)',
                 quantity: 1,
                 size: `${backWidth}x${backHeight} мм`,
                 category: 'back'
+            });
+        }
+
+        // 🆕 Ъглов шкаф — затварящ панел (от материала на вратичките, без панти)
+        if (type === 'blind' && cabinet.door_count > 0) {
+            const panelWidth = Math.floor((w - 3) / 2);
+            const panelHeight = h - 3;
+            elements.push({
+                name: 'Затварящ панел',
+                quantity: 1,
+                size: `${panelWidth}x${panelHeight} мм`,
+                category: 'door'  // от материала на вратичките
+            });
+        }
+
+        // 🆕 Шкаф фурна — второ дъно (на ниво вратичка/чекмедже 145мм)
+        if (type === 'oven') {
+            const ovenBottomW = w - 36;
+            elements.push({
+                name: 'Дъно фурна (второ)',
+                quantity: 1,
+                size: `${ovenBottomW}x${d} мм`,
+                category: 'component'
             });
         }
 
@@ -425,8 +489,10 @@ export const Calculator = {
             });
         }
 
-        // Панти - САМО ако има врати И НЕ е upperLift И НЕ е baseBasket (вратичката е на механизма)
+        // Панти - САМО ако има врати И НЕ е upperLift И НЕ е baseBasket
+        // За ъглов шкаф (blind) — панти само за вратата, НЕ за затварящия панел
         if (cabinet.door_count > 0 && type !== 'upperLift' && type !== 'baseBasket') {
+            // За blind: панти само за вратата (door_count), не за панела
             elements.push({
                 name: 'Панти',
                 quantity: cabinet.door_count * 2,
@@ -482,9 +548,15 @@ export const Calculator = {
     calculateDoorWidth(cabinet) {
         const w = cabinet.width;
         const doorCount = cabinet.door_count;
+        const type = cabinet.type;
         
         if (cabinet.custom_door_size && cabinet.door_width) {
             return cabinet.door_width;
+        }
+
+        // Ъглов шкаф — вратата е половината ширина
+        if (type === 'blind') {
+            return Math.floor((w - 3) / 2);
         }
         
         if (doorCount === 1) {
@@ -805,6 +877,7 @@ export const Calculator = {
             door_count: parseInt(document.getElementById('door_count')?.value) || 0,
             drawer_count: parseInt(document.getElementById('drawer_count')?.value) || 0,
             has_back: document.getElementById('has_back')?.checked || true,
+            back_type: document.getElementById('back_type')?.value || 'internal',
             custom_door_size: document.getElementById('custom_door_size')?.checked || false,
             
             // 🆕 НОВО ПОЛЕ: Метод на конструкция

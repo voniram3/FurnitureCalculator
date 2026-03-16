@@ -411,13 +411,21 @@ export const Tables = {
             totalLabor += parseFloat(text) || 0;
         });
 
-        // Материали от каталог (Materials.selectedMaterials)
+        // Материали от каталог (Materials.selectedMaterials + additionalItems)
         let totalMaterialsCatalog = 0;
         const Materials = window.Materials;
         if (Materials && Materials.selectedMaterials) {
             Object.values(Materials.selectedMaterials).forEach(sel => {
                 if (sel && sel.material && sel.quantity) {
                     totalMaterialsCatalog += (sel.material.price || 0) * sel.quantity;
+                }
+                // Допълнителни продукти
+                if (sel?.additionalItems) {
+                    sel.additionalItems.forEach(ai => {
+                        if (ai.material && ai.quantity) {
+                            totalMaterialsCatalog += (ai.material.price || 0) * ai.quantity;
+                        }
+                    });
                 }
             });
         }

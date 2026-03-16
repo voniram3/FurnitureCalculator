@@ -79,7 +79,14 @@ export const Materials = {
         if (selected.length === 0) return '';
         
         const total = selected.reduce((sum, [k, data]) => {
-            return sum + ((data.material.price || 0) * data.quantity);
+            let itemTotal = (data.material.price || 0) * data.quantity;
+            // Добавяме и допълнителните продукти
+            if (data.additionalItems && data.additionalItems.length > 0) {
+                data.additionalItems.forEach(ai => {
+                    itemTotal += (ai.material.price || 0) * ai.quantity;
+                });
+            }
+            return sum + itemTotal;
         }, 0);
         
         return `
@@ -186,6 +193,8 @@ export const Materials = {
         if (!category) return '';
         
         const selected = this.selectedMaterials[categoryKey];
+        const hasAdditional = selected?.additionalItems?.length > 0;
+        const totalItems = selected ? 1 + (selected.additionalItems?.length || 0) : 0;
         const headerStyle = selected 
             ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;'
             : '';
@@ -193,15 +202,20 @@ export const Materials = {
         return `
             <button type="button" class="collapsible" data-category="${categoryKey}" style="${headerStyle}">
                 ${category.name}
-                ${selected ? `<span style="opacity: 0.9; font-size: 0.9em; margin-left: 10px;">✓ ${selected.quantity} ${selected.material.unit}</span>` : ''}
+                ${selected ? `<span style="opacity: 0.9; font-size: 0.9em; margin-left: 10px;">✓ ${selected.quantity} ${selected.material.unit}${hasAdditional ? ` + ${selected.additionalItems.length} допълн.` : ''}</span>` : ''}
             </button>
             <div class="collapsible-content">
                 <div class="collapsible-content-inner" style="padding: 15px;">
                     ${selected ? this.renderSelectedMaterialCard(categoryKey, selected, category) : ''}
+                    ${selected && hasAdditional ? this.renderAdditionalItems(categoryKey, selected.additionalItems, category) : ''}
                     <button class="btn btn-success" onclick="Materials.openMaterialSelector('${categoryKey}')" 
-                            style="width: 100%; margin-top: ${selected ? '15px' : '0'};">
-                        ${selected ? '✏️ Промени материал' : '➕ Избери материал'}
+                            style="width: 100%; margin-top: ${selected ? '10px' : '0'};">
+                        ${selected ? '✏️ Промени основен материал' : '➕ Избери материал'}
                     </button>
+                    ${selected ? `<button class="btn btn-secondary" onclick="Materials.openAdditionalSelector('${categoryKey}')" 
+                            style="width: 100%; margin-top: 8px;">
+                        ➕ Добави допълнителен продукт
+                    </button>` : ''}
                 </div>
             </div>
         `;
@@ -219,10 +233,18 @@ export const Materials = {
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: #333; font-size: 0.9em;">${displayName}</div>
                         <div style="font-size: 0.8em; color: #666; margin-top: 3px;">
-                            ${material.size ? material.size + ' • ' : ''}${material.price ? material.price.toFixed(2) + ' лв/' + material.unit : 'N/A'}
+                            ${material.size ? material.size + ' • ' : ''}
                         </div>
-                        <div style="font-size: 0.8em; color: #999; margin-top: 3px;">
-                            Количество: <strong>${quantity} ${material.unit}</strong>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap;">
+                            <label style="font-size: 0.8em; color: #888;">Цена:</label>
+                            <input type="number" value="${(material.price || 0).toFixed(2)}" min="0" step="0.01"
+                                   style="width: 70px; padding: 3px 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85em; text-align: right;"
+                                   onchange="Materials.updateMaterialPrice('${key}', this.value)">
+                            <span style="font-size: 0.8em; color: #888;">лв/${material.unit}</span>
+                            <label style="font-size: 0.8em; color: #888; margin-left: 8px;">Бр:</label>
+                            <input type="number" value="${quantity}" min="0" step="1"
+                                   style="width: 50px; padding: 3px 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85em; text-align: center;"
+                                   onchange="Materials.updateMaterialQuantity('${key}', this.value)">
                         </div>
                     </div>
                     <div style="text-align: right;">
@@ -250,11 +272,20 @@ export const Materials = {
                     <div>
                         <div style="font-weight: 600; color: #333; margin-bottom: 3px;">${displayName}</div>
                         <div style="font-size: 0.85em; color: #666;">
-                            ${material.size ? material.size + ' • ' : ''}${material.price ? material.price.toFixed(2) + ' лв/' + material.unit : 'N/A'}
-                        </div>
-                        <div style="font-size: 0.85em; color: #999; margin-top: 3px;">
-                            Количество: <strong>${quantity} ${material.unit}</strong>
+                            ${material.size ? material.size : ''}
                             ${edge ? ` • Кант: ${edge.name}` : ''}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <label style="font-size: 0.85em; color: #888;">Цена:</label>
+                            <input type="number" value="${(material.price || 0).toFixed(2)}" min="0" step="0.01"
+                                   style="width: 80px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; text-align: right;"
+                                   onchange="Materials.updateMaterialPrice('${key}', this.value)">
+                            <span style="font-size: 0.85em; color: #888;">лв/${material.unit}</span>
+                            <label style="font-size: 0.85em; color: #888; margin-left: 10px;">Количество:</label>
+                            <input type="number" value="${quantity}" min="0" step="1"
+                                   style="width: 60px; padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; text-align: center;"
+                                   onchange="Materials.updateMaterialQuantity('${key}', this.value)">
+                            <span style="font-size: 0.85em; color: #888;">${material.unit}</span>
                         </div>
                     </div>
                     <div style="text-align: right;">
@@ -565,11 +596,26 @@ export const Materials = {
         const edgeId = document.getElementById('materialEdge')?.value;
         const edge = edgeId ? getMaterialById(edgeId) : null;
         
+        // Проверка дали добавяме допълнителен продукт
+        if (this._addingAdditional && this._additionalCategoryKey) {
+            const catKey = this._additionalCategoryKey;
+            this._addingAdditional = false;
+            this._additionalCategoryKey = null;
+            
+            this.addAdditionalItem(catKey, material, quantity);
+            this.closeMaterialSelector();
+            return;
+        }
+
         const fullKey = this.currentSubcategory 
             ? `${this.currentCategory}_${this.currentSubcategory}` 
             : this.currentCategory;
         
-        this.selectedMaterials[fullKey] = { material, quantity, edge };
+        // Запазваме additionalItems ако вече съществуват
+        const existing = this.selectedMaterials[fullKey];
+        const additionalItems = existing?.additionalItems || [];
+        
+        this.selectedMaterials[fullKey] = { material, quantity, edge, additionalItems };
         
         this.closeMaterialSelector();
         this.renderMaterialsTab();
@@ -595,6 +641,8 @@ export const Materials = {
         }
         this.currentCategory = null;
         this.currentSubcategory = null;
+        this._addingAdditional = false;
+        this._additionalCategoryKey = null;
     },
     
     // Връзване на modal събития
@@ -872,6 +920,148 @@ export const Materials = {
         this.selectMaterial(material.id);
         
         console.log(`✅ Custom material added: ${name} (${this.currentCategory})`);
+    },
+
+    // ==================== ➕ ДОПЪЛНИТЕЛНИ ПРОДУКТИ ====================
+
+    /**
+     * Рендерира списък с допълнителни продукти за категория.
+     */
+    renderAdditionalItems(categoryKey, additionalItems, category) {
+        if (!additionalItems || additionalItems.length === 0) return '';
+
+        let html = '<div style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 10px;">';
+        html += '<h5 style="margin: 0 0 8px; color: #888; font-size: 0.85em;">Допълнителни продукти:</h5>';
+
+        additionalItems.forEach((item, idx) => {
+            const total = (item.material.price || 0) * item.quantity;
+            const displayName = item.material.code ? `${item.material.code} - ${item.material.name}` : item.material.name;
+
+            html += `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 6px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-weight: 500; font-size: 0.88em; color: #333;">${displayName}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                        <label style="font-size: 0.78em; color: #888;">Цена:</label>
+                        <input type="number" value="${(item.material.price || 0).toFixed(2)}" min="0" step="0.01"
+                               style="width: 65px; padding: 3px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 0.85em;"
+                               onchange="Materials.updateAdditionalPrice('${categoryKey}', ${idx}, this.value)">
+                        <label style="font-size: 0.78em; color: #888;">Бр:</label>
+                        <input type="number" value="${item.quantity}" min="0" step="1" 
+                               style="width: 50px; padding: 3px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 0.85em;"
+                               onchange="Materials.updateAdditionalQuantity('${categoryKey}', ${idx}, this.value)">
+                        <span style="font-size: 0.85em; color: #667eea; font-weight: 600; min-width: 60px; text-align: right;">${total.toFixed(2)} лв</span>
+                        <button onclick="Materials.removeAdditionalItem('${categoryKey}', ${idx})" 
+                                style="background: #f8d7da; border: none; color: #721c24; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.85em;">🗑️</button>
+                    </div>
+                </div>`;
+        });
+
+        html += '</div>';
+        return html;
+    },
+
+    /**
+     * Отваря selector за добавяне на допълнителен продукт.
+     */
+    openAdditionalSelector(categoryKey) {
+        this._addingAdditional = true;
+        this._additionalCategoryKey = categoryKey;
+        this.openMaterialSelector(categoryKey);
+    },
+
+    /**
+     * Добавя допълнителен продукт към категория.
+     */
+    addAdditionalItem(categoryKey, material, quantity = 1) {
+        const selection = this.selectedMaterials[categoryKey];
+        if (!selection) return;
+
+        if (!selection.additionalItems) {
+            selection.additionalItems = [];
+        }
+
+        // Проверка дали вече съществува
+        const existing = selection.additionalItems.find(ai => ai.material.id === material.id);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            selection.additionalItems.push({ material, quantity });
+        }
+
+        this.saveSelections();
+        this.renderMaterialsTab();
+    },
+
+    /**
+     * Премахва допълнителен продукт.
+     */
+    removeAdditionalItem(categoryKey, index) {
+        const selection = this.selectedMaterials[categoryKey];
+        if (!selection?.additionalItems) return;
+
+        selection.additionalItems.splice(index, 1);
+        if (selection.additionalItems.length === 0) {
+            delete selection.additionalItems;
+        }
+
+        this.saveSelections();
+        this.renderMaterialsTab();
+    },
+
+    /**
+     * Обновява бройката на допълнителен продукт.
+     */
+    updateAdditionalQuantity(categoryKey, index, newQty) {
+        const selection = this.selectedMaterials[categoryKey];
+        if (!selection?.additionalItems?.[index]) return;
+
+        const qty = parseInt(newQty) || 0;
+        if (qty <= 0) {
+            this.removeAdditionalItem(categoryKey, index);
+            return;
+        }
+
+        selection.additionalItems[index].quantity = qty;
+        this.saveSelections();
+        this.renderMaterialsTab();
+    },
+
+    /**
+     * Обновява цената на допълнителен продукт.
+     */
+    updateAdditionalPrice(categoryKey, index, newPrice) {
+        const selection = this.selectedMaterials[categoryKey];
+        if (!selection?.additionalItems?.[index]) return;
+
+        selection.additionalItems[index].material.price = parseFloat(newPrice) || 0;
+        this.saveSelections();
+        this.renderMaterialsTab();
+    },
+
+    /**
+     * Обновява цената на основен материал.
+     */
+    updateMaterialPrice(key, newPrice) {
+        const selection = this.selectedMaterials[key];
+        if (!selection?.material) return;
+
+        selection.material.price = parseFloat(newPrice) || 0;
+        this.saveSelections();
+        this.renderMaterialsTab();
+    },
+
+    /**
+     * Обновява количеството на основен материал.
+     */
+    updateMaterialQuantity(key, newQty) {
+        const selection = this.selectedMaterials[key];
+        if (!selection) return;
+
+        selection.quantity = parseInt(newQty) || 0;
+        this.saveSelections();
+        this.renderMaterialsTab();
     }
 };
 

@@ -19,8 +19,8 @@ export const UI = {
         form.innerHTML = `
             <div class="form-row">
                 <div class="form-group">
-                    <label for="cabinet_id">ID на шкаф:</label>
-                    <input type="text" id="cabinet_id" name="cabinet_id" placeholder="base_600">
+                    <label for="cabinet_id">Име на шкаф:</label>
+                    <input type="text" id="cabinet_id" name="cabinet_id" placeholder="Напр. Долен 600">
                 </div>
                 <div class="form-group">
                     <label for="type">Тип шкаф:</label>
@@ -33,32 +33,88 @@ export const UI = {
                 </div>
             </div>
 
-          <h4 style="margin: 20px 0 10px 0; color: #667eea;">Размери (mm)</h4>
-<div class="form-row">
-    <div class="form-group">
-        <label for="width">Ширина:</label>
-        <input type="number" id="width" name="width" value="600" min="100" required>
-    </div>
-    <div class="form-group">
-        <label for="height">Височина:</label>
-        <input type="number" id="height" name="height" value="760" min="100" required>
-    </div>
-    <div class="form-group">
-        <label for="depth">Дълбочина:</label>
-        <input type="number" id="depth" name="depth" value="560" min="100" required>
-    </div>
-</div>
+            <h4 style="margin: 20px 0 10px 0; color: #667eea;">📏 Размери (mm)</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="width">Ширина:</label>
+                    <input type="number" id="width" name="width" value="600" min="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="height">Височина:</label>
+                    <input type="number" id="height" name="height" value="760" min="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="depth">Дълбочина:</label>
+                    <input type="number" id="depth" name="depth" value="560" min="100" required>
+                </div>
+            </div>
 
-<!-- 🆕 НОВО: Бройка шкафове -->
-<div class="form-row">
-    <div class="form-group">
-        <label for="cabinet_quantity">🔢 Бройка шкафове:</label>
-        <input type="number" id="cabinet_quantity" name="cabinet_quantity" value="1" min="1" max="50" step="1">
-        <small style="color: #666;">Колко еднакви шкафа да се добавят към проекта</small>
-    </div>
-</div>
+            <h4 style="margin: 20px 0 10px 0; color: #667eea;">⚙️ Конфигурация</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="shelf_count">Рафтове:</label>
+                    <input type="number" id="shelf_count" name="shelf_count" value="1" min="0" max="10" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="door_count">Врати:</label>
+                    <input type="number" id="door_count" name="door_count" value="2" min="0" max="4" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="drawer_count">Чекмеджета:</label>
+                    <input type="number" id="drawer_count" name="drawer_count" value="0" min="0" max="6" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="cabinet_quantity">Бройка:</label>
+                    <input type="number" id="cabinet_quantity" name="cabinet_quantity" value="1" min="1" max="50" step="1">
+                </div>
+            </div>
 
-            <h4 style="margin: 20px 0 10px 0; color: #667eea;">Дебелина на кант</h4>
+            <div class="form-group">
+                <input type="checkbox" id="custom_door_size" name="custom_door_size">
+                <label for="custom_door_size" class="checkbox-label">Персонализирани размери на врати</label>
+            </div>
+            <div id="customDoorSection" class="custom-door-size" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="door_width">Ширина на врата (mm):</label>
+                        <input type="number" id="door_width" name="door_width" placeholder="автоматично">
+                    </div>
+                    <div class="form-group">
+                        <label for="door_height">Височина на врата (mm):</label>
+                        <input type="number" id="door_height" name="door_height" placeholder="автоматично">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <input type="checkbox" id="has_back" name="has_back" checked>
+                    <label for="has_back" class="checkbox-label">Шкафът има гръб</label>
+                </div>
+                <div id="backTypeSection" style="margin-left: 25px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; cursor: pointer;">
+                        <input type="radio" name="back_type" id="back_type_internal" value="internal" checked> 
+                        <span style="font-size: 0.9em;">Вграден гръб <small style="color: #888;">(w-18 × h-18)</small></span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="radio" name="back_type" id="back_type_external" value="external">
+                        <span style="font-size: 0.9em;">Външен гръб <small style="color: #888;">(w-1 × h-1)</small></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107; margin: 15px 0;">
+                <input type="checkbox" id="pages_between_panels" name="pages_between_panels">
+                <label for="pages_between_panels" class="checkbox-label" style="font-weight: bold; color: #856404;">
+                    📐 Страници между дъно/капак (без стабилизатори)
+                </label>
+                <div style="font-size: 0.85em; color: #856404; margin-top: 5px; margin-left: 25px;">
+                    <strong>Метод 2:</strong> Страниците са по-ниски (h-36) и се слагат между дъно и капак.
+                    Дъно и капак са с пълна ширина. <strong>Няма стабилизатори.</strong>
+                </div>
+            </div>
+
+            <h4 style="margin: 20px 0 10px 0; color: #667eea;">📏 Дебелина на кант</h4>
             <div class="form-row">
                 <div class="form-group">
                     <label for="body_edge">Кант за корпус:</label>
@@ -77,70 +133,6 @@ export const UI = {
                         <option value="1">1 мм</option>
                         <option value="2" selected>2 мм</option>
                     </select>
-                </div>
-            </div>
-
-            <h4 style="margin: 20px 0 10px 0; color: #667eea;">Конфигурация</h4>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="shelf_count">Брой рафтове:</label>
-                    <input type="number" id="shelf_count" name="shelf_count" value="1" min="0" max="10">
-                </div>
-                <div class="form-group">
-                    <label for="door_count">Брой врати:</label>
-                    <input type="number" id="door_count" name="door_count" value="2" min="0" max="4">
-                </div>
-                <div class="form-group">
-                    <label for="drawer_count">Брой чекмеджета:</label>
-                    <input type="number" id="drawer_count" name="drawer_count" value="0" min="0" max="6">
-                </div>
-            </div>
-            <!-- 🆕 НОВО: Dropdown за повдигащ механизъм -->
-<div class="form-row" id="liftMechanismSection" style="display: none;">
-    <div class="form-group">
-        <label for="lift_mechanism">⬆️ Повдигащ механизъм:</label>
-        <select id="lift_mechanism" name="lift_mechanism">
-            <option value="Aventos HS">Aventos HS (малък)</option>
-            <option value="Aventos HF">Aventos HF (голям)</option>
-            <option value="Aventos HK">Aventos HK (среден)</option>
-            <option value="GTV повдигач малък">GTV повдигач малък</option>
-            <option value="GTV повдигач голям">GTV повдигач голям</option>
-        </select>
-    </div>
-</div>
-
-            <div class="form-group">
-                <input type="checkbox" id="has_back" name="has_back" checked>
-                <label for="has_back" class="checkbox-label">Шкафът има гръб</label>
-            </div>
-
-            <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 2px solid #ffc107; margin: 15px 0;">
-                <input type="checkbox" id="pages_between_panels" name="pages_between_panels">
-                <label for="pages_between_panels" class="checkbox-label" style="font-weight: bold; color: #856404;">
-                    📐 Страници между дъно/капак (без стабилизатори)
-                </label>
-                <div style="font-size: 0.85em; color: #856404; margin-top: 5px; margin-left: 25px;">
-                    <strong>Метод 2:</strong> Страниците са по-ниски (h-36) и се слагат между дъно и капак.<br>
-                    Дъно и капак са с пълна ширина. <strong>Няма стабилизатори.</strong>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <input type="checkbox" id="custom_door_size" name="custom_door_size">
-                <label for="custom_door_size" class="checkbox-label">Персонализирани размери на врати</label>
-            </div>
-
-            <div id="customDoorSection" class="custom-door-size" style="display: none;">
-                <h4 style="color: #ffc107; margin-bottom: 10px;">Размери на врати (mm)</h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="door_width">Ширина на врата:</label>
-                        <input type="number" id="door_width" name="door_width" placeholder="автоматично">
-                    </div>
-                    <div class="form-group">
-                        <label for="door_height">Височина на врата:</label>
-                        <input type="number" id="door_height" name="door_height" placeholder="автоматично">
-                    </div>
                 </div>
             </div>
 
@@ -169,6 +161,19 @@ export const UI = {
         const customDoorCheck = document.getElementById('custom_door_size');
         if (customDoorCheck) {
             customDoorCheck.addEventListener('change', () => this.toggleCustomDoorSize());
+        }
+
+        // 🆕 Real-time 3D обновяване при промяна на размери/конфигурация
+        const dimensionFields = ['width', 'height', 'depth', 'shelf_count', 'door_count', 'drawer_count'];
+        dimensionFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', () => this.update3DPreview());
+            }
+        });
+        const hasBackCheck = document.getElementById('has_back');
+        if (hasBackCheck) {
+            hasBackCheck.addEventListener('change', () => this.update3DPreview());
         }
 
         // Бутони
@@ -221,25 +226,18 @@ export const UI = {
     // Обновяване на preview на шкафа
     updateCabinetPreview() {
     const type = document.getElementById('type')?.value;
-    const liftSection = document.getElementById('liftMechanismSection');
+    const container3d = document.getElementById('cabinet3dContainer');
 
     if (!type || !cabinetTypes[type]) {
-        document.getElementById('cabinetIcon').textContent = '📦';
         document.getElementById('cabinetTypeName').textContent = 'Изберете тип шкаф';
         document.getElementById('cabinetDescription').textContent = 'Изберете тип от менюто';
-        if (liftSection) liftSection.style.display = 'none';
+        if (container3d) container3d.style.display = 'none';
         return;
     }
 
     const config = cabinetTypes[type];
-    document.getElementById('cabinetIcon').textContent = config.icon;
     document.getElementById('cabinetTypeName').textContent = config.name;
     document.getElementById('cabinetDescription').textContent = config.description;
-
-    // 🆕 ПОКАЗВА/СКРИВА секцията за механизъм
-    if (liftSection) {
-        liftSection.style.display = (type === 'upperLift' || type === 'baseMechanism' || type === 'baseBasket') ? 'block' : 'none';
-    }
 
     // Автоматично попълване на стойности
     const widthInput = document.getElementById('width');
@@ -256,6 +254,9 @@ export const UI = {
     if (doorsInput) doorsInput.value = config.defaultDoors;
     if (drawersInput) drawersInput.value = config.defaultDrawers;
 
+    // 🆕 3D ВИЗУАЛИЗАЦИЯ — с reset на ротация
+    this.update3DPreview(true);
+
     // Анимация
     const card = document.getElementById('cabinetPreviewCard');
     if (card) {
@@ -265,6 +266,41 @@ export const UI = {
         }, 10);
     }
 },
+
+    // 🆕 Обновяване на 3D визуализацията
+    update3DPreview(resetView = false) {
+        const container3d = document.getElementById('cabinet3dContainer');
+        if (!container3d) return;
+
+        const type = document.getElementById('type')?.value;
+        if (!type || !cabinetTypes[type]) {
+            container3d.style.display = 'none';
+            return;
+        }
+
+        container3d.style.display = 'block';
+
+        const Cabinet3D = window.Cabinet3D;
+        if (!Cabinet3D) return;
+
+        if (resetView && Cabinet3D.resetView) {
+            Cabinet3D.resetView();
+        }
+
+        setTimeout(() => {
+            Cabinet3D.update({
+                type: type,
+                width: parseInt(document.getElementById('width')?.value) || 600,
+                height: parseInt(document.getElementById('height')?.value) || 760,
+                depth: parseInt(document.getElementById('depth')?.value) || 560,
+                shelf_count: parseInt(document.getElementById('shelf_count')?.value) || 0,
+                door_count: parseInt(document.getElementById('door_count')?.value) || 0,
+                drawer_count: parseInt(document.getElementById('drawer_count')?.value) || 0,
+                has_back: document.getElementById('has_back')?.checked !== false,
+                back_type: document.querySelector('input[name="back_type"]:checked')?.value || 'internal'
+            });
+        }, 50);
+    },
 
 // Показване/скриване на персонализирани врати
 toggleCustomDoorSize() {
@@ -390,10 +426,10 @@ addToProject() {
         door_count: parseInt(document.getElementById('door_count').value) || 0,
         drawer_count: parseInt(document.getElementById('drawer_count').value) || 0,
         has_back: document.getElementById('has_back').checked,
+        back_type: document.querySelector('input[name="back_type"]:checked')?.value || 'internal',
         custom_door_width: document.getElementById('door_width')?.value,
         custom_door_height: document.getElementById('door_height')?.value,
-        pages_between_panels: document.getElementById('pages_between_panels')?.checked || false, // 🆕 ДОБАВИ
-        lift_mechanism: document.getElementById('lift_mechanism')?.value || 'Aventos HS' // 🆕 ДОБАВИ
+        pages_between_panels: document.getElementById('pages_between_panels')?.checked || false
     };
 
     // 🆕 НОВА ЛОГИКА: Добавяне с бройка
