@@ -223,7 +223,6 @@ export const Tables = {
 
             <div style="margin-top: 30px; text-align: center;">
                 <button class="btn btn-success" onclick="Tables.autoCalculateFromProject()">🤖 Авто изчисление на проект</button>
-                <button class="btn" onclick="PdfOffer.showOfferModal()" style="margin-left: 10px; background: linear-gradient(135deg, #667eea, #764ba2); color: white;">📄 Генерирай оферта (PDF)</button>
             </div>
         `;
 
@@ -717,35 +716,35 @@ export const Tables = {
         // 🆕 ОБНОВЯВАНЕ НА БРОЙКИ МАТЕРИАЛИ В КАТАЛОГА
         // Само материалите, които реално се използват от шкафовете
         // ═══════════════════════════════════════════════════════
-
-        // Събираме бройки по категория от елементите
-        let totalLegs = 0;          // крака
-        let totalShelfHolders = 0;  // рафтодържачи
-        let totalGuides = 0;        // водачи за чекмеджета
-        let totalLiftMechs = 0;     // повдигащи механизми
-        let totalBackCount = 0;     // гръбове
-
-        project.forEach(cabinet => {
-            const qty = cabinet.quantity || 1;
-            const elements = Calculator.generateCabinetElements ?
-                Calculator.generateCabinetElements(cabinet) : [];
-
-            elements.forEach(el => {
-                const elQty = (el.quantity || 0) * qty;
-
-                if (el.name === 'Крака') totalLegs += elQty;
-                if (el.name === 'Рафтодържачи') totalShelfHolders += elQty;
-                if (el.name === 'Водачи') totalGuides += elQty;
-                if (el.category === 'back') totalBackCount += elQty;
-                if (el.name && el.name.includes('Повдигащ механизъм')) totalLiftMechs += elQty;
-            });
-        });
-
-        console.log(`  Крака: ${totalLegs}, Панти: ${totalHinges}, Рафтодържачи: ${totalShelfHolders}`);
-        console.log(`  Водачи: ${totalGuides}, Повдигащи: ${totalLiftMechs}, Гръбове: ${totalBackCount}`);
-
         if (Materials && Materials.selectedMaterials) {
             console.log('📦 Обновяване на бройки материали...');
+
+            // Събираме бройки по категория от елементите
+            let totalLegs = 0;          // крака
+            let totalShelfHolders = 0;  // рафтодържачи
+            let totalGuides = 0;        // водачи за чекмеджета
+            let totalLiftMechs = 0;     // повдигащи механизми
+            let totalBackCount = 0;     // гръбове
+
+            project.forEach(cabinet => {
+                const qty = cabinet.quantity || 1;
+                const elements = Calculator.generateCabinetElements ?
+                    Calculator.generateCabinetElements(cabinet) : [];
+
+                elements.forEach(el => {
+                    const elQty = (el.quantity || 0) * qty;
+
+                    if (el.name === 'Крака') totalLegs += elQty;
+                    if (el.name === 'Рафтодържачи') totalShelfHolders += elQty;
+                    if (el.name === 'Водачи') totalGuides += elQty;
+                    if (el.name === 'Панти') totalHinges += 0; // вече пресметнати горе
+                    if (el.category === 'back') totalBackCount += elQty;
+                    if (el.name && el.name.includes('Повдигащ механизъм')) totalLiftMechs += elQty;
+                });
+            });
+
+            console.log(`  Крака: ${totalLegs}, Панти: ${totalHinges}, Рафтодържачи: ${totalShelfHolders}`);
+            console.log(`  Водачи: ${totalGuides}, Повдигащи: ${totalLiftMechs}, Гръбове: ${totalBackCount}`);
 
             // Обновяваме само избраните (маркираните) материали
             // Ако материалът е избран но не е нужен — бройка = 0

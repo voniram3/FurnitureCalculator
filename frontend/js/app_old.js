@@ -6,7 +6,6 @@ import { Calculator } from './calculator.js';
 import { Api } from './api.js';
 import { Materials } from './materials.js';
 import { Cabinet3D } from './cabinet3d.js';
-import { PdfOffer } from './pdf-offer.js';
 
 // Стартиране на приложението при зареждане на DOM
 document.addEventListener('DOMContentLoaded', async () => {
@@ -17,8 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     Tables.init();
 
     await Materials.init(); // Async зареждане на материали от JSON файлове
-
-    PdfOffer.init(); // Инициализация на PDF модул
 
     // Връзване на tab switching събития
     document.querySelectorAll('.tab').forEach(tab => {
